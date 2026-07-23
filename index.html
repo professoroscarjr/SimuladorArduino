@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-900 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TinkerArduino Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+
+        .grid-bg {
+            background-color: #0f172a;
+            background-image: radial-gradient(#334155 1.2px, transparent 1.2px);
+            background-size: 20px 20px;
+        }
+
+        /* STRICT PIN HOVER: Hand cursor + Bright Red Glow (Only when NOT simulating) */
+        body:not(.is-simulating) .pin-node {
+            transition: fill 0.12s ease, stroke 0.12s ease, filter 0.12s ease;
+            cursor: pointer !important;
+        }
+
+        body:not(.is-simulating) .pin-node:hover {
+            fill: #ef4444 !important;
+            stroke: #fca5a5 !important;
+            stroke-width: 2.5px !important;
+            cursor: pointer !important;
+            filter: drop-shadow(0px 0px 4px rgba(239, 68, 68, 0.95));
+        }
+
+        body.is-simulating .pin-node {
+            cursor: default !important;
+        }
+
+        /* Disable palette items during simulation */
+        body.is-simulating #palette-list > div {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        /* Wire hover states */
+        body.is-simulating .wire-path {
+            cursor: default !important;
+        }
+
+        body:not(.is-simulating) .wire-path {
+            cursor: pointer !important;
+        }
+
+        .wire-path {
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            transition: stroke-width 0.1s ease;
+            cursor: pointer;
+        }
+
+        .wire-path:hover {
+            stroke-width: 5.5px !important;
+            filter: drop-shadow(0px 0px 3px rgba(255, 255, 255, 0.6));
+        }
+
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        @keyframes pulse-warn {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        .warn-pulse {
+            animation: pulse-warn 1s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col overflow-hidden select-none bg-slate-900 text-slate-100">
+
+    <header class="h-14 bg-slate-800 border-b border-slate-700/80 px-4 flex items-center justify-between z-20 shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="bg-cyan-500 text-slate-950 p-2 rounded-lg font-black text-lg flex items-center justify-center w-9 h-9 shadow-lg shadow-cyan-500/20">
+                <i class="fa-solid fa-microchip"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-slate-100 text-base leading-tight tracking-wide">TinkerArduino <span class="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono ml-1">Lei de Ohm v3.0</span></h1>
+                <p class="text-xs text-slate-400">Física Elétrica, Áudio Real e Componentes Dinâmicos</p>
+            </div>
+        </div>
+
+        <!-- Central Action Controls -->
+        <div class="flex items-center space-x-2">
+            <button id="btn-start" onclick="toggleSimulation()" class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-medium text-xs px-4 py-2 rounded-lg transition-all flex items-center space-x-2 shadow-md shadow-emerald-900/40">
+                <i class="fa-solid fa-play"></i>
+                <span>Iniciar Simulação</span>
+            </button>
+            <button id="btn-reset" onclick="resetSimulation()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium text-xs px-3 py-2 rounded-lg transition-all flex items-center space-x-1.5 border border-slate-600">
+                <i class="fa-solid fa-rotate-right"></i>
+                <span>Reiniciar</span>
+            </button>
+            <div class="h-5 w-px bg-slate-700 mx-1"></div>
+            <button id="btn-clear" onclick="clearCanvas()" class="bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/50 font-medium text-xs px-3 py-2 rounded-lg transition-all flex items-center space-x-1.5">
+                <i class="fa-solid fa-trash-can"></i>
+                <span>Limpar Canvas</span>
+            </button>
+        </div>
+
+        <!-- Wire Color Selector & Helper -->
+        <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-1 bg-slate-900/80 p-1.5 rounded-lg border border-slate-700/60">
+                <span class="text-xs text-slate-400 mr-1.5 font-medium pl-1">Cor do Fio:</span>
+                <button onclick="setWireColor('#ef4444')" class="w-5 h-5 rounded-full bg-red-500 hover:scale-110 transition-transform ring-2 ring-offset-1 ring-offset-slate-900 ring-transparent focus:ring-red-400" title="Vermelho (VCC / 5V)"></button>
+                <button onclick="setWireColor('#000000')" class="w-5 h-5 rounded-full bg-black border border-slate-600 hover:scale-110 transition-transform ring-2 ring-offset-1 ring-offset-slate-900 ring-transparent focus:ring-slate-400" title="Preto (GND)"></button>
+                <button onclick="setWireColor('#3b82f6')" class="w-5 h-5 rounded-full bg-blue-500 hover:scale-110 transition-transform ring-2 ring-offset-1 ring-offset-slate-900 ring-transparent focus:ring-blue-400" title="Azul (Sinal)"></button>
+                <button onclick="setWireColor('#eab308')" class="w-5 h-5 rounded-full bg-yellow-500 hover:scale-110 transition-transform ring-2 ring-offset-1 ring-offset-slate-900 ring-transparent focus:ring-yellow-400" title="Amarelo (Sinal)"></button>
+                <button onclick="setWireColor('#22c55e')" class="w-5 h-5 rounded-full bg-green-500 hover:scale-110 transition-transform ring-2 ring-offset-1 ring-offset-slate-900 ring-transparent focus:ring-green-400" title="Verde"></button>
+            </div>
+
+            <button onclick="toggleSerialMonitor()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs px-3 py-2 rounded-lg border border-slate-600 flex items-center space-x-1.5">
+                <i class="fa-solid fa-terminal text-cyan-400"></i>
+                <span>Monitor Serial</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden relative">
+
+        <!-- Left Toolbar / Component Palette -->
+        <aside class="w-64 bg-slate-800/95 border-r border-slate-700/80 flex flex-col z-10 shrink-0">
+            <div class="p-3 border-b border-slate-700/80 bg-slate-800">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Componentes</h2>
+                <div class="relative">
+                    <input type="text" id="component-search" oninput="filterComponents()" placeholder="Buscar componente..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500">
+                    <i class="fa-solid fa-magnifying-glass absolute right-2.5 top-2 text-slate-500 text-xs"></i>
+                </div>
+            </div>
+
+            <div id="palette-list" class="flex-1 overflow-y-auto p-2 space-y-1.5">
+                <!-- Palette Items rendered dynamically by JS -->
+            </div>
+        </aside>
+
+        <!-- Central Circuit Canvas -->
+        <main class="flex-1 relative grid-bg overflow-hidden flex flex-col" id="canvas-container" ondragover="allowDrop(event)" ondrop="handleCanvasDrop(event)">
+            
+            <!-- SVG Canvas for Circuit, Components & Wires -->
+            <svg id="circuit-svg" class="w-full h-full absolute inset-0 cursor-crosshair">
+                <defs>
+                    <filter id="glow-red" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-green" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-yellow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+
+                <!-- Grid Background visual -->
+                <g id="grid-layer"></g>
+
+                <!-- Layer 1: Components (Arduino, Breadboards, Sensors, LEDs) -->
+                <g id="components-layer"></g>
+
+                <!-- Layer 2: Wires (Rendered ON TOP of components) -->
+                <g id="wires-layer"></g>
+
+                <!-- Wire Draft Line during connection dragging -->
+                <line id="wire-draft" x1="0" y1="0" x2="0" y2="0" stroke="#ef4444" stroke-width="3.5" stroke-dasharray="5,5" class="hidden pointer-events-none" />
+            </svg>
+
+            <!-- Floating Controls Overlay / Inspector Panel -->
+            <div id="inspector-panel" class="hidden absolute top-4 left-4 bg-slate-800/90 backdrop-blur-md border border-slate-700 p-3.5 rounded-xl shadow-2xl z-20 w-80 text-xs">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-2 mb-3">
+                    <h3 id="inspector-title" class="font-semibold text-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-cyan-400"></i> Propriedades
+                    </h3>
+                    <button onclick="closeInspector()" class="text-slate-400 hover:text-slate-200">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div id="inspector-content" class="space-y-3">
+                    <!-- Dynamic Component Controls -->
+                </div>
+            </div>
+
+            <!-- ESC Instruction Badge -->
+            <div class="absolute bottom-3 left-3 bg-slate-900/90 border border-slate-800 text-slate-400 text-[11px] px-3 py-1.5 rounded-lg backdrop-blur pointer-events-none flex items-center space-x-2 z-10 shadow-lg">
+                <span class="bg-slate-800 text-slate-200 font-mono px-1.5 py-0.5 rounded border border-slate-700 text-[10px]">ESC</span>
+                <span>Cancela ligação de fio ou seleção atual</span>
+            </div>
+        </main>
+
+        <aside class="w-96 bg-slate-900 border-l border-slate-700/80 flex flex-col z-10 shrink-0">
+            <!-- Code Header -->
+            <div class="h-10 bg-slate-800 border-b border-slate-700 px-3 flex items-center justify-between shrink-0">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-code text-cyan-400 text-xs"></i>
+                    <span class="text-xs font-semibold text-slate-200">Código C++</span>
+                </div>
+                <select id="preset-select" onchange="loadPresetCode(this.value)" class="bg-slate-900 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1 focus:outline-none focus:border-cyan-500 w-36">
+                    <option value="blink">Blink (LED 13)</option>
+                    <option value="fade">Fade PWM</option>
+                    <option value="pot_led">LDR / Potenciômetro</option>
+                    <option value="piezo">Alarme Piezo</option>
+                </select>
+            </div>
+
+            <!-- Code Editor Box -->
+            <div class="flex-1 relative bg-slate-950 flex flex-col overflow-hidden">
+                <textarea id="code-editor" class="w-full h-full bg-slate-950 text-slate-200 code-font text-xs p-3 focus:outline-none resize-none leading-relaxed tracking-wide" spellcheck="false">// Exemplo Blink
+void setup() {
+  pinMode(13, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(13, HIGH);
+  delay(1000);
+  digitalWrite(13, LOW);
+  delay(1000);
+}</textarea>
+            </div>
+
+            <!-- Serial Monitor Drawer (Collapsible) -->
+            <div id="serial-drawer" class="h-48 border-t border-slate-700 bg-slate-950 flex flex-col shrink-0">
+                <div class="h-8 bg-slate-800 px-3 flex items-center justify-between border-b border-slate-700">
+                    <span class="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-terminal text-cyan-400"></i> Monitor Serial
+                    </span>
+                    <button onclick="clearSerialLog()" class="text-[10px] bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-slate-300">Limpar</button>
+                </div>
+                <div id="serial-output" class="flex-1 p-2 code-font text-xs text-emerald-400 overflow-y-auto whitespace-pre-wrap select-text">--- Monitor Serial Pronto ---</div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        window.state = {
+            components: [],
+            wires: [],
+            selectedComponentId: null,
+            selectedWireId: null,
+            isDrawingWire: false,
+            wireStartPin: null,
+            activeWireColor: '#ef4444',
+            isSimulating: false,
+            simulationInterval: null,
+            simulationTimeouts: [],
+            pinStates: {},
+            elecStates: {}, // Ohm's Law calculated voltages & currents: { compId: { currentMa, voltage, burnt, powerMw } }
+            nodeVoltages: {},
+            audioCtx: null,
+            piezoOsc: null
+        };
+
+        const state = window.state;
+
+        window.handleButtonPress = function(e, id, stateVal) {
+            e.stopPropagation();
+            updateCompProp(id, 'state', stateVal);
+        };
+
+        const PALETTE = [
+            { type: 'arduino_uno', name: 'Arduino Uno R3', icon: 'fa-microchip', category: 'Placas' },
+            { type: 'breadboard', name: 'Protoboard (400 pts)', icon: 'fa-border-all', category: 'Placas' },
+            { type: 'led', name: 'LED (Vermelho)', icon: 'fa-lightbulb', category: 'Saídas', color: '#ef4444' },
+            { type: 'led_green', name: 'LED (Verde)', icon: 'fa-lightbulb', category: 'Saídas', color: '#22c55e' },
+            { type: 'resistor', name: 'Resistor', icon: 'fa-wave-square', category: 'Passivos' },
+            { type: 'pushbutton', name: 'Push Button', icon: 'fa-circle-dot', category: 'Entradas' },
+            { type: 'potentiometer', name: 'Potenciômetro 10k', icon: 'fa-sliders', category: 'Entradas' },
+            { type: 'ultrasonic', name: 'Sensor Ultrassônico', icon: 'fa-bullhorn', category: 'Sensores' },
+            { type: 'ldr', name: 'Sensor de Luz (LDR)', icon: 'fa-sun', category: 'Sensores' },
+            { type: 'piezo', name: 'Piezo / Buzzer', icon: 'fa-volume-high', category: 'Saídas' },
+            { type: 'servo', name: 'Micro Servo (SG90)', icon: 'fa-fan', category: 'Atuadores' }
+        ];
+
+        const RESISTOR_COLOR_MAP = {
+            '0': '#000000', '1': '#78350f', '2': '#ef4444', '3': '#f97316',
+            '4': '#eab308', '5': '#22c55e', '6': '#3b82f6', '7': '#a855f7',
+            '8': '#64748b', '9': '#ffffff'
+        };
+
+        window.onload = function() {
+            renderPalette();
+            
+            // STRICT REQUIREMENT: Start ONLY with Arduino Uno R3 on canvas
+            state.components = [
+                {
+                    id: 'ard1',
+                    type: 'arduino_uno',
+                    x: 220,
+                    y: 110,
+                    name: 'Arduino Uno R3'
+                }
+            ];
+
+            state.wires = [];
+
+            // Global Keydown Handler for ESC
+            window.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' || e.key === 'Esc') {
+                    cancelCurrentAction();
+                }
+            });
+
+            const svg = document.getElementById('circuit-svg');
+            svg.addEventListener('mousemove', handleCanvasMouseMove);
+
+            renderAll();
+        };
+
+        function cancelCurrentAction() {
+            if (state.isDrawingWire) {
+                state.isDrawingWire = false;
+                state.wireStartPin = null;
+                const draft = document.getElementById('wire-draft');
+                if (draft) draft.classList.add('hidden');
+                return;
+            }
+
+            if (state.selectedComponentId || state.selectedWireId) {
+                state.selectedComponentId = null;
+                state.selectedWireId = null;
+                closeInspector();
+                renderAll();
+            }
+        }
+
+        function renderPalette() {
+            const list = document.getElementById('palette-list');
+            list.innerHTML = '';
+
+            PALETTE.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'flex items-center space-x-3 p-2 rounded-lg bg-slate-900/60 border border-slate-700/50 hover:bg-slate-700/60 hover:border-cyan-500/50 cursor-grab transition-all text-xs text-slate-200';
+                el.draggable = true;
+                el.ondragstart = (e) => handleDragStart(e, item.type);
+                
+                el.innerHTML = `
+                    <div class="w-7 h-7 rounded-md bg-slate-800 flex items-center justify-center text-cyan-400 border border-slate-700 shrink-0">
+                        <i class="fa-solid ${item.icon}"></i>
+                    </div>
+                    <span class="font-medium truncate">${item.name}</span>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        window.handleDragStart = function(e, type) {
+            if (state.isSimulating) {
+                e.preventDefault();
+                return;
+            }
+            e.dataTransfer.setData('component_type', type);
+        };
+
+        window.allowDrop = function(e) {
+            e.preventDefault();
+        };
+
+        window.handleCanvasDrop = function(e) {
+            e.preventDefault();
+            if (state.isSimulating) return; // Bloqueia arrastar novos componentes na simulação
+
+            const type = e.dataTransfer.getData('component_type');
+            if (!type) return;
+
+            const rect = document.getElementById('circuit-svg').getBoundingClientRect();
+            const x = Math.round((e.clientX - rect.left) / 10) * 10 - 40;
+            const y = Math.round((e.clientY - rect.top) / 10) * 10 - 20;
+
+            const compObj = PALETTE.find(p => p.type === type);
+            const id = 'comp_' + Date.now();
+
+            state.components.push({
+                id,
+                type,
+                x: Math.max(20, x),
+                y: Math.max(20, y),
+                name: compObj ? compObj.name : type,
+                props: {
+                    resistance: 220, // Default 220 ohms
+                    distance: 50,
+                    light: 300,
+                    rotation: 135, // potentiometer dial midpoint
+                    state: 0
+                }
+            });
+
+            renderAll();
+        };
+
+        function setWireColor(color) {
+            state.activeWireColor = color;
+        }
+
+        function filterComponents() {
+            const query = document.getElementById('component-search').value.toLowerCase();
+            const items = document.querySelectorAll('#palette-list > div');
+            items.forEach((item, index) => {
+                const pItem = PALETTE[index];
+                if (pItem.name.toLowerCase().includes(query) || pItem.category.toLowerCase().includes(query)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        function calculateOhmsLawPhysics() {
+            state.elecStates = {};
+            state.nodeVoltages = {};
+            if (!state.isSimulating) return;
+
+            const pinVoltages = {
+                'ard1-5V': 5.0, 'ard1-3.3V': 3.3,
+                'ard1-GND': 0.0, 'ard1-GND1': 0.0, 'ard1-GND2': 0.0
+            };
+
+            Object.keys(state.pinStates).forEach(key => {
+                const st = state.pinStates[key];
+                if (st && st.mode === 'OUTPUT') {
+                    pinVoltages[key] = st.value === 1 ? 5.0 : 0.0;
+                }
+            });
+
+            // Recursive pathfinder through components to compute equivalent resistance & source voltage
+            function findAllPaths(startCompId, startPinId, visited = new Set()) {
+                const nodeKey = `${startCompId}-${startPinId}`;
+                if (visited.has(nodeKey)) return [];
+                visited.add(nodeKey);
+
+                let foundPaths = [];
+
+                if (startCompId === 'ard1') {
+                    let st = state.pinStates[nodeKey];
+                    if (pinVoltages[nodeKey] !== undefined) {
+                        return [{ voltage: pinVoltages[nodeKey], resistance: 0 }];
+                    } else if (st && st.mode === 'INPUT_PULLUP') {
+                        return [{ voltage: 5.0, resistance: 30000 }];
+                    }
+                    return [];
+                }
+
+                const comp = state.components.find(c => c.id === startCompId);
+                if (!comp) return [];
+
+                let currentResistance = 0;
+                let nextPinsToSearch = [];
+
+                if (comp.type === 'resistor') {
+                    currentResistance = comp.props.resistance || 220;
+                    nextPinsToSearch.push(startPinId === 'p1' ? 'p2' : 'p1');
+                } else if (comp.type === 'ldr') {
+                    let lux = comp.props.light !== undefined ? comp.props.light : 50;
+                    currentResistance = Math.max(100, 10000 - (lux * 99)); // Simplified LDR curve
+                    nextPinsToSearch.push(startPinId === 'p1' ? 'p2' : 'p1');
+                } else if (comp.type === 'potentiometer' && startPinId === 'out') {
+                    let pathsVcc = findAllPaths(comp.id, 'vcc', new Set(visited));
+                    let pathsGnd = findAllPaths(comp.id, 'gnd', new Set(visited));
+                    let pVcc = pathsVcc.find(p => p.voltage > 0);
+                    let pGnd = pathsGnd.find(p => p.voltage === 0);
+                    let rot = comp.props.rotation !== undefined ? comp.props.rotation : 135;
+                    let ratio = rot / 270;
+                    
+                    if (pVcc && pGnd) {
+                        let vOut = pGnd.voltage + (pVcc.voltage - pGnd.voltage) * ratio;
+                        let rTotal = 10000;
+                        let r1 = rTotal * (1 - ratio);
+                        let r2 = rTotal * ratio;
+                        let req = (r1 * r2) / (r1 + r2);
+                        return [{ voltage: vOut, resistance: req }];
+                    }
+                    return [];
+                } else if (comp.type === 'pushbutton') {
+                    let isPressed = comp.props.state === 1;
+                    if (isPressed) {
+                        ['a1', 'a2', 'b1', 'b2'].filter(p => p !== startPinId).forEach(p => nextPinsToSearch.push(p));
+                    } else {
+                        if (startPinId === 'a1') nextPinsToSearch.push('a2');
+                        if (startPinId === 'a2') nextPinsToSearch.push('a1');
+                        if (startPinId === 'b1') nextPinsToSearch.push('b2');
+                        if (startPinId === 'b2') nextPinsToSearch.push('b1');
+                    }
+                    nextPinsToSearch.push(startPinId);
+                } else if (comp.type === 'breadboard' || comp.type === 'breadboard_mini') {
+                    let parts = startPinId.split('_');
+                    let type = parts[0];
+                    let relatedPins = [];
+                    
+                    if (type === 'ptn') {
+                        for(let c=1; c<=29; c++) if(c%6 !== 0) relatedPins.push(`ptn_${c}`);
+                    } else if (type === 'ptp') {
+                        for(let c=1; c<=29; c++) if(c%6 !== 0) relatedPins.push(`ptp_${c}`);
+                    } else if (type === 'pbn') {
+                        for(let c=1; c<=29; c++) if(c%6 !== 0) relatedPins.push(`pbn_${c}`);
+                    } else if (type === 'pbp') {
+                        for(let c=1; c<=29; c++) if(c%6 !== 0) relatedPins.push(`pbp_${c}`);
+                    } else if (type === 'tt') {
+                        let col = parts[1];
+                        for (let r=1; r<=5; r++) relatedPins.push(`tt_${col}_${r}`);
+                    } else if (type === 'tb') {
+                        let col = parts[1];
+                        for (let r=1; r<=5; r++) relatedPins.push(`tb_${col}_${r}`);
+                    }
+                    
+                    for (let pin of relatedPins) {
+                        if (pin !== startPinId) nextPinsToSearch.push(pin);
+                    }
+                    nextPinsToSearch.push(startPinId);
+                } else if (comp.type === 'piezo') {
+                    currentResistance = 100;
+                    nextPinsToSearch.push(startPinId === 'pos' ? 'neg' : 'pos');
+                } else {
+                    nextPinsToSearch.push(startPinId);
+                }
+
+                for (let searchPin of nextPinsToSearch) {
+                    const connectedWires = state.wires.filter(w =>
+                        (w.fromCompId === startCompId && w.fromPinId === searchPin) ||
+                        (w.toCompId === startCompId && w.toPinId === searchPin)
+                    );
+
+                    for (let w of connectedWires) {
+                        const nextComp = w.fromCompId === startCompId ? w.toCompId : w.fromCompId;
+                        const nextPin = w.fromCompId === startCompId ? w.toPinId : w.fromPinId;
+                        let subPaths = findAllPaths(nextComp, nextPin, new Set(visited));
+                        for (let sp of subPaths) {
+                            foundPaths.push({
+                                voltage: sp.voltage,
+                                resistance: currentResistance + sp.resistance
+                            });
+                        }
+                    }
+                }
+                return foundPaths;
+            }
+
+            const getPinVoltage = (pinStr) => {
+                let paths = findAllPaths('ard1', pinStr);
+                let pVcc = paths.find(p => p.voltage > 0);
+                let pGnd = paths.find(p => p.voltage === 0);
+                
+                if (pVcc && pGnd) {
+                    let r1 = pVcc.resistance;
+                    let r2 = pGnd.resistance;
+                    if (r1 + r2 === 0) return pVcc.voltage; 
+                    return pGnd.voltage + (pVcc.voltage - pGnd.voltage) * (r2 / (r1 + r2));
+                } else if (pVcc) return pVcc.voltage;
+                else if (pGnd) return pGnd.voltage;
+                return null;
+            };
+
+            for (let i = 0; i <= 13; i++) state.nodeVoltages[`D${i}`] = getPinVoltage(`D${i}`);
+            for (let i = 0; i <= 5; i++) state.nodeVoltages[`A${i}`] = getPinVoltage(`A${i}`);
+
+            state.components.forEach(comp => {
+                if (comp.type.startsWith('led')) {
+                    let anodePaths = findAllPaths(comp.id, 'anode');
+                    let cathodePaths = findAllPaths(comp.id, 'cathode');
+
+                    let pVcc = anodePaths.find(p => p.voltage > 0);
+                    let pGnd = cathodePaths.find(p => p.voltage === 0);
+
+                    let currentMa = 0, burnt = false, brightness = 0, voltageDrop = 0;
+
+                    if (pVcc && pGnd) {
+                        let sourceVoltage = pVcc.voltage - pGnd.voltage;
+                        let seriesR = pVcc.resistance + pGnd.resistance;
+                        const V_forward = 2.0;
+
+                        if (sourceVoltage > V_forward) {
+                            voltageDrop = sourceVoltage;
+                            if (seriesR < 10) {
+                                // LED em curto sem resistor > Acidente!
+                                currentMa = Math.round(((sourceVoltage - V_forward) / 10) * 1000);
+                                burnt = true;
+                            } else {
+                                currentMa = ((sourceVoltage - V_forward) / seriesR) * 1000;
+                                if (currentMa > 30) burnt = true;
+                                else brightness = Math.min(1.0, currentMa / 20.0);
+                            }
+                        }
+                    }
+
+                    state.elecStates[comp.id] = {
+                        voltage: voltageDrop,
+                        currentMa: Math.round(currentMa * 10) / 10,
+                        burnt, brightness,
+                        powerMw: Math.round(voltageDrop * currentMa)
+                    };
+                    state.pinStates[`${comp.id}-anode`] = { value: (!burnt && brightness > 0) ? 1 : 0 };
+                } else if (comp.type === 'piezo') {
+                    let posPaths = findAllPaths(comp.id, 'pos');
+                    let negPaths = findAllPaths(comp.id, 'neg');
+                    let pVcc = posPaths.find(p => p.voltage > 0);
+                    let pGnd = negPaths.find(p => p.voltage === 0);
+                    
+                    let isActive = false;
+                    if (pVcc && pGnd && (pVcc.voltage - pGnd.voltage) > 2.5) {
+                        isActive = true;
+                    }
+                    
+                    if (isActive && !state.pinStates[`${comp.id}-active`]) {
+                        state.pinStates[`${comp.id}-active`] = { value: 1 };
+                        startPiezoSound(440); // default beep if just powered
+                    } else if (!isActive && state.pinStates[`${comp.id}-active`]) {
+                        state.pinStates[`${comp.id}-active`] = null;
+                        stopPiezoSound();
+                    }
+                }
+            });
+        }
+
+        function renderAll() {
+            calculateOhmsLawPhysics();
+
+            const compLayer = document.getElementById('components-layer');
+            const wireLayer = document.getElementById('wires-layer');
+
+            compLayer.innerHTML = '';
+            wireLayer.innerHTML = '';
+
+            // Render Components First
+            state.components.forEach(comp => {
+                const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                group.setAttribute('id', `comp-group-${comp.id}`);
+                group.setAttribute('transform', `translate(${comp.x}, ${comp.y})`);
+                
+                group.addEventListener('mousedown', (e) => startComponentDrag(e, comp));
+                group.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectComponent(comp.id);
+                });
+
+                group.innerHTML = renderComponentSVG(comp);
+                compLayer.appendChild(group);
+            });
+
+            // Render Wires ON TOP of components
+            state.wires.forEach(wire => {
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                
+                const p1 = getPinCoordinates(wire.fromCompId, wire.fromPinId);
+                const p2 = getPinCoordinates(wire.toCompId, wire.toPinId);
+
+                if (!p1 || !p2) return;
+
+                const dx = Math.abs(p2.x - p1.x);
+                const dy = Math.abs(p2.y - p1.y);
+                const cx1 = p1.x + (p2.x > p1.x ? dx * 0.3 : -dx * 0.3);
+                const cy1 = p1.y + (p2.y > p1.y ? -dy * 0.5 - 20 : dy * 0.5 + 20);
+                const cx2 = p2.x + (p2.x > p1.x ? -dx * 0.3 : dx * 0.3);
+                const cy2 = p2.y + (p2.y > p1.y ? dy * 0.5 + 20 : -dy * 0.5 - 20);
+
+                const d = `M ${p1.x} ${p1.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p2.x} ${p2.y}`;
+
+                const isSelected = state.selectedWireId === wire.id;
+                const strokeColor = isSelected ? '#38bdf8' : wire.color;
+
+                path.innerHTML = `
+                    <path d="${d}" stroke="${strokeColor}" stroke-width="4" fill="none" class="wire-path" onclick="selectWire(event, '${wire.id}')"/>
+                    
+                    <!-- Terminal Dots -->
+                    <circle cx="${p1.x}" cy="${p1.y}" r="4" fill="#f8fafc" stroke="${strokeColor}" stroke-width="2" pointer-events="none" />
+                    <circle cx="${p2.x}" cy="${p2.y}" r="4" fill="#f8fafc" stroke="${strokeColor}" stroke-width="2" pointer-events="none" />
+                    
+                    <!-- Wire Badges over Arduino -->
+                    ${renderPinBadge(p1.x, p1.y, wire.fromPinId)}
+                    ${renderPinBadge(p2.x, p2.y, wire.toPinId)}
+                `;
+
+                wireLayer.appendChild(path);
+            });
+        }
+
+        function renderPinBadge(x, y, pinId) {
+            if (!pinId) return '';
+            let label = pinId.replace('D', '').replace('A', 'A');
+            if (pinId === 'anode' || pinId === 'pos' || pinId === 'vcc') label = '+';
+            if (pinId === 'cathode' || pinId === 'neg' || pinId === 'gnd' || pinId === 'GND' || pinId === 'GND1' || pinId === 'GND2') label = '-';
+            
+            return `
+                <g transform="translate(${x}, ${y - 12})" pointer-events="none">
+                    <rect x="-12" y="-8" width="24" height="12" rx="3" fill="#0f172a" stroke="#475569" stroke-width="1" opacity="0.95" />
+                    <text x="0" y="1" fill="#f1f5f9" font-size="8" font-family="sans-serif" font-weight="bold" text-anchor="middle">${label}</text>
+                </g>
+            `;
+        }
+
+        function renderComponentSVG(comp) {
+            switch(comp.type) {
+                case 'arduino_uno': return renderArduinoUnoSVG(comp);
+                case 'breadboard':
+                case 'breadboard_mini': return renderBreadboardSVG(comp);
+                case 'led':
+                case 'led_green': return renderLEDSVG(comp);
+                case 'resistor': return renderResistorSVG(comp);
+                case 'pushbutton': return renderPushButtonSVG(comp);
+                case 'potentiometer': return renderPotentiometerSVG(comp);
+                case 'ultrasonic': return renderUltrasonicSVG(comp);
+                case 'ldr': return renderLDRSVG(comp);
+                case 'piezo': return renderPiezoSVG(comp);
+                case 'servo': return renderServoSVG(comp);
+                default: return `<rect width="60" height="40" fill="#334155" rx="4"/>`;
+            }
+        }
+
+        function renderArduinoUnoSVG(comp) {
+            const isSelected = state.selectedComponentId === comp.id;
+
+            // Updated Layout matching physical Uno board (SCL/SDA to the left, TX/RX to the right)
+            const digPinsLeft = [
+                { id: 'SCL', label: 'SCL', x: 80 },
+                { id: 'SDA', label: 'SDA', x: 90 },
+                { id: 'AREF', label: 'AREF', x: 100 },
+                { id: 'GND2', label: 'GND', x: 110 },
+                { id: 'D13', label: '13', x: 120 },
+                { id: 'D12', label: '12', x: 130 },
+                { id: 'D11', label: '~11', x: 140 },
+                { id: 'D10', label: '~10', x: 150 },
+                { id: 'D9', label: '~9', x: 160 },
+                { id: 'D8', label: '8', x: 170 }
+            ];
+
+            const digPinsRight = [
+                { id: 'D7', label: '7', x: 190 },
+                { id: 'D6', label: '~6', x: 200 },
+                { id: 'D5', label: '~5', x: 210 },
+                { id: 'D4', label: '4', x: 220 },
+                { id: 'D3', label: '~3', x: 230 },
+                { id: 'D2', label: '2', x: 240 },
+                { id: 'D1', label: 'TX->1', x: 250 },
+                { id: 'D0', label: 'RX<-0', x: 260 }
+            ];
+
+            const powerPins = [
+                { id: 'IOREF', label: 'IOREF', x: 100 },
+                { id: 'RESET', label: 'RESET', x: 110 },
+                { id: '3.3V', label: '3.3V', x: 120 },
+                { id: '5V', label: '5V', x: 130 },
+                { id: 'GND', label: 'GND', x: 140 },
+                { id: 'GND1', label: 'GND', x: 150 },
+                { id: 'VIN', label: 'Vin', x: 160 }
+            ];
+
+            const analogPins = [
+                { id: 'A0', label: 'A0', x: 190 },
+                { id: 'A1', label: 'A1', x: 200 },
+                { id: 'A2', label: 'A2', x: 210 },
+                { id: 'A3', label: 'A3', x: 220 },
+                { id: 'A4', label: 'A4', x: 230 },
+                { id: 'A5', label: 'A5', x: 240 }
+            ];
+
+            let html = `
+                ${isSelected ? '<rect x="-4" y="-4" width="288" height="198" rx="10" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4,4"/>' : ''}
+
+                <rect width="280" height="190" rx="8" fill="#006468" stroke="#004d50" stroke-width="2"/>
+                
+                <!-- USB & Power Jack -->
+                <rect x="-15" y="15" width="25" height="35" rx="2" fill="#cbd5e1" stroke="#94a3b8"/>
+                <rect x="-15" y="130" width="30" height="40" rx="3" fill="#0f172a" stroke="#000000"/>
+
+                <!-- MCU ATmega328P -->
+                <rect x="100" y="90" width="100" height="28" rx="2" fill="#1e293b"/>
+                <text x="150" y="107" fill="#64748b" font-size="9" font-family="monospace" text-anchor="middle">ATmega328P</text>
+
+                <!-- Board Markings -->
+                <text x="130" y="60" fill="#ffffff" font-weight="bold" font-size="16" font-family="sans-serif" text-anchor="middle">ARDUINO UNO</text>
+                <text x="130" y="155" fill="#e2e8f0" font-weight="bold" font-size="7.5" font-family="sans-serif" text-anchor="middle">POWER</text>
+                <text x="215" y="155" fill="#e2e8f0" font-weight="bold" font-size="7.5" font-family="sans-serif" text-anchor="middle">ANALOG IN</text>
+
+                <!-- LED 13 -->
+                <circle cx="120" cy="45" r="3.5" fill="${state.pinStates['ard1-D13']?.value ? '#22c55e' : '#334155'}" filter="${state.pinStates['ard1-D13']?.value ? 'url(#glow-green)' : ''}" />
+                <text x="110" y="47" fill="#cbd5e1" font-size="7" font-family="sans-serif" text-anchor="middle">L</text>
+
+                <!-- Headers Backgrounds -->
+                <rect x="75" y="8" width="100" height="14" fill="#0f172a" rx="1"/>
+                <rect x="185" y="8" width="80" height="14" fill="#0f172a" rx="1"/>
+                <rect x="95" y="168" width="70" height="14" fill="#0f172a" rx="1"/>
+                <rect x="185" y="168" width="60" height="14" fill="#0f172a" rx="1"/>
+            `;
+
+            // Draw Top Headers (SCL to 8)
+            digPinsLeft.forEach(p => {
+                html += `
+                    <g transform="translate(${p.x}, 15)">
+                        <rect x="-4" y="-4" width="8" height="8" fill="#1e293b" stroke="#475569" stroke-width="0.5"/>
+                        <circle class="pin-node" data-pin="${p.id}" cx="0" cy="0" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', '${p.id}')"/>
+                        <text x="0" y="16" fill="#ffffff" font-size="7.5" font-weight="bold" font-family="monospace" text-anchor="end" transform="rotate(-90, 0, 16)">${p.label}</text>
+                    </g>
+                `;
+            });
+
+            // Draw Top Headers (7 to 0)
+            digPinsRight.forEach(p => {
+                html += `
+                    <g transform="translate(${p.x}, 15)">
+                        <rect x="-4" y="-4" width="8" height="8" fill="#1e293b" stroke="#475569" stroke-width="0.5"/>
+                        <circle class="pin-node" data-pin="${p.id}" cx="0" cy="0" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', '${p.id}')"/>
+                        <text x="0" y="16" fill="#ffffff" font-size="7.5" font-weight="bold" font-family="monospace" text-anchor="end" transform="rotate(-90, 0, 16)">${p.label}</text>
+                    </g>
+                `;
+            });
+
+            // Draw Power Headers
+            powerPins.forEach(p => {
+                html += `
+                    <g transform="translate(${p.x}, 175)">
+                        <rect x="-4" y="-4" width="8" height="8" fill="#1e293b" stroke="#475569" stroke-width="0.5"/>
+                        <circle class="pin-node" data-pin="${p.id}" cx="0" cy="0" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', '${p.id}')"/>
+                        <text x="0" y="-12" fill="#ffffff" font-size="7.5" font-weight="bold" font-family="monospace" text-anchor="start" transform="rotate(-90, 0, -12)">${p.label}</text>
+                    </g>
+                `;
+            });
+
+            // Draw Analog Headers
+            analogPins.forEach(p => {
+                html += `
+                    <g transform="translate(${p.x}, 175)">
+                        <rect x="-4" y="-4" width="8" height="8" fill="#1e293b" stroke="#475569" stroke-width="0.5"/>
+                        <circle class="pin-node" data-pin="${p.id}" cx="0" cy="0" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', '${p.id}')"/>
+                        <text x="0" y="-12" fill="#ffffff" font-size="7.5" font-weight="bold" font-family="monospace" text-anchor="start" transform="rotate(-90, 0, -12)">${p.label}</text>
+                    </g>
+                `;
+            });
+
+            return html;
+        }
+
+        function renderBreadboardSVG(comp) {
+            let html = `<rect width="350" height="210" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>`;
+            
+            // Fenda central isolante
+            html += `<rect x="25" y="100" width="300" height="10" fill="#e2e8f0" rx="2"/>`; 
+
+            // Linhas de polaridade horizontais
+            html += `<line x1="25" y1="12" x2="325" y2="12" stroke="#3b82f6" stroke-width="1.5"/>`;
+            html += `<line x1="25" y1="38" x2="325" y2="38" stroke="#ef4444" stroke-width="1.5"/>`;
+            html += `<line x1="25" y1="172" x2="325" y2="172" stroke="#3b82f6" stroke-width="1.5"/>`;
+            html += `<line x1="25" y1="198" x2="325" y2="198" stroke="#ef4444" stroke-width="1.5"/>`;
+
+            // Símbolos + e - nas pontas
+            const drawPolarity = (y, isPos) => {
+                const color = isPos ? "#ef4444" : "#3b82f6";
+                const sym = isPos ? "+" : "-";
+                html += `<text x="12" y="${y+4}" fill="${color}" font-size="10" font-weight="bold" text-anchor="middle">${sym}</text>`;
+                html += `<text x="338" y="${y+4}" fill="${color}" font-size="10" font-weight="bold" text-anchor="middle">${sym}</text>`;
+            };
+            drawPolarity(20, false); drawPolarity(30, true);
+            drawPolarity(180, false); drawPolarity(190, true);
+
+            // Letras laterais (a-j)
+            const topLetters = ['j','i','h','g','f'];
+            const botLetters = ['e','d','c','b','a'];
+            topLetters.forEach((l, i) => {
+                html += `<text x="12" y="${53 + i*10}" fill="#64748b" font-size="8" font-family="monospace" text-anchor="middle">${l}</text>`;
+                html += `<text x="338" y="${53 + i*10}" fill="#64748b" font-size="8" font-family="monospace" text-anchor="middle">${l}</text>`;
+            });
+            botLetters.forEach((l, i) => {
+                html += `<text x="12" y="${123 + i*10}" fill="#64748b" font-size="8" font-family="monospace" text-anchor="middle">${l}</text>`;
+                html += `<text x="338" y="${123 + i*10}" fill="#64748b" font-size="8" font-family="monospace" text-anchor="middle">${l}</text>`;
+            });
+
+            const drawHole = (id, cx, cy) => {
+                let res = `<rect x="${cx-2.5}" y="${cy-2.5}" width="5" height="5" fill="#334155" rx="1"/>`;
+                res += `<circle class="pin-node" data-pin="${id}" cx="${cx}" cy="${cy}" r="4.5" fill="transparent" onclick="handlePinClick(event, '${comp.id}', '${id}')"/>`;
+                return res;
+            };
+
+            for (let c = 1; c <= 30; c++) {
+                let cx = 20 + c * 10;
+                
+                // Números indicativos a cada 5 colunas
+                if (c % 5 === 0 || c === 1) {
+                    html += `<text x="${cx}" y="45" fill="#64748b" font-size="6" font-family="monospace" text-anchor="middle">${c}</text>`;
+                    html += `<text x="${cx}" y="167" fill="#64748b" font-size="6" font-family="monospace" text-anchor="middle">${c}</text>`;
+                }
+
+                // Blocos de terminais centrais (A-E e F-J)
+                for (let r = 1; r <= 5; r++) {
+                    html += drawHole(`tt_${c}_${r}`, cx, 40 + r*10); // Top (f-j)
+                    html += drawHole(`tb_${c}_${r}`, cx, 110 + r*10); // Bot (a-e)
+                }
+
+                // Trilhas de energia (grupos de 5, com gap de 1 na sexta coluna)
+                if (c % 6 !== 0) {
+                    html += drawHole(`ptn_${c}`, cx, 20);
+                    html += drawHole(`ptp_${c}`, cx, 30);
+                    html += drawHole(`pbn_${c}`, cx, 180);
+                    html += drawHole(`pbp_${c}`, cx, 190);
+                }
+            }
+            return html;
+        }
+
+        function renderLEDSVG(comp) {
+            const isGreen = comp.type === 'led_green';
+            const baseColor = isGreen ? '#22c55e' : '#ef4444';
+            const glowFilter = isGreen ? 'url(#glow-green)' : 'url(#glow-red)';
+
+            const elec = state.elecStates[comp.id] || {};
+            const isBurnt = elec.burnt;
+            const brightness = elec.brightness || 0;
+            const isOn = !isBurnt && brightness > 0;
+
+            let html = `
+                <!-- Pins -->
+                <line x1="12" y1="35" x2="12" y2="55" stroke="#94a3b8" stroke-width="2"/>
+                <path d="M 28 35 L 28 42 L 26 47 L 26 55" stroke="#94a3b8" stroke-width="2" fill="none"/>
+                
+                <rect x="7" y="40" width="10" height="10" rx="2" fill="#0f172a" stroke="#ef4444" stroke-width="1"/>
+                <text x="12" y="47.5" fill="#ef4444" font-size="9" font-weight="bold" text-anchor="middle">-</text>
+                
+                <rect x="21" y="40" width="10" height="10" rx="2" fill="#0f172a" stroke="#22c55e" stroke-width="1"/>
+                <text x="26" y="47.5" fill="#22c55e" font-size="9" font-weight="bold" text-anchor="middle">+</text>
+
+                <circle class="pin-node" cx="12" cy="55" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'cathode')"/>
+                <circle class="pin-node" cx="26" cy="55" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'anode')"/>
+            `;
+
+            if (isBurnt) {
+                html += `
+                    <path d="M 8 35 L 8 20 A 12 12 0 0 1 32 20 L 32 35 Z" fill="#1e293b" stroke="#0f172a" stroke-width="1.5"/>
+                    <circle cx="20" cy="12" r="10" fill="#64748b" opacity="0.7"/>
+                    <circle cx="12" cy="8" r="6" fill="#475569" opacity="0.6"/>
+                    <circle cx="26" cy="6" r="7" fill="#475569" opacity="0.6"/>
+                    <text x="20" y="24" fill="#ef4444" font-size="14" font-weight="bold" text-anchor="middle">⚡</text>
+
+                    <g transform="translate(20, -15)" class="warn-pulse">
+                        <rect x="-48" y="-10" width="96" height="18" rx="4" fill="#991b1b" stroke="#fca5a5" stroke-width="1"/>
+                        <text x="0" y="2" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">⚡ QUEIMOU (${elec.currentMa}mA)</text>
+                    </g>
+                `;
+            } else {
+                html += `
+                    <path d="M 8 35 L 8 20 A 12 12 0 0 1 32 20 L 32 35 Z" fill="${baseColor}" opacity="${isOn ? brightness : '0.4'}" filter="${isOn ? glowFilter : ''}" stroke="${baseColor}" stroke-width="1.5"/>
+                `;
+            }
+
+            return html;
+        }
+
+        function getResistorColorBands(ohms) {
+            let str = Math.round(ohms).toString();
+            let digits = str.substring(0, 2);
+            let zeros = str.length - 2;
+
+            if (ohms < 10) {
+                digits = (ohms * 10).toString().substring(0, 2);
+                zeros = -1;
+            }
+
+            const c1 = RESISTOR_COLOR_MAP[digits[0]] || '#78350f';
+            const c2 = RESISTOR_COLOR_MAP[digits[1]] || '#000000';
+            const multMap = {
+                '-1': '#eab308', '0': '#000000', '1': '#78350f', '2': '#ef4444',
+                '3': '#f97316', '4': '#eab308', '5': '#22c55e', '6': '#3b82f6'
+            };
+            const c3 = multMap[zeros.toString()] || '#ef4444';
+            const c4 = '#eab308'; // Gold 5%
+
+            return [c1, c2, c3, c4];
+        }
+
+        function renderResistorSVG(comp) {
+            const ohms = comp.props.resistance || 220;
+            const bands = getResistorColorBands(ohms);
+
+            return `
+                <line x1="0" y1="10" x2="15" y2="10" stroke="#94a3b8" stroke-width="2"/>
+                <line x1="45" y1="10" x2="60" y2="10" stroke="#94a3b8" stroke-width="2"/>
+                
+                <rect x="15" y="3" width="30" height="14" rx="3" fill="#fde68a" stroke="#d97706" stroke-width="1"/>
+                
+                <rect x="21" y="3" width="3" height="14" fill="${bands[0]}"/>
+                <rect x="27" y="3" width="3" height="14" fill="${bands[1]}"/>
+                <rect x="33" y="3" width="3" height="14" fill="${bands[2]}"/>
+                <rect x="39" y="3" width="3" height="14" fill="${bands[3]}"/>
+
+                <circle class="pin-node" cx="0" cy="10" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'p1')"/>
+                <circle class="pin-node" cx="60" cy="10" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'p2')"/>
+            `;
+        }
+
+        function renderPushButtonSVG(comp) {
+            const isPressed = comp.props?.state === 1;
+            return `
+                <rect width="40" height="40" rx="4" fill="#334155" stroke="#1e293b" stroke-width="2"/>
+                <g onmousedown="handleButtonPress(event, '${comp.id}', 1)" onmouseup="handleButtonPress(event, '${comp.id}', 0)" onmouseleave="handleButtonPress(event, '${comp.id}', 0)">
+                    <circle cx="20" cy="20" r="${isPressed ? '11' : '13'}" fill="${isPressed ? '#dc2626' : '#ef4444'}" stroke="#991b1b" stroke-width="1.5" class="cursor-pointer" />
+                </g>
+                
+                <circle class="pin-node" cx="0" cy="10" r="3" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'a1')"/>
+                <circle class="pin-node" cx="0" cy="30" r="3" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'a2')"/>
+                <circle class="pin-node" cx="40" cy="10" r="3" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'b1')"/>
+                <circle class="pin-node" cx="40" cy="30" r="3" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'b2')"/>
+            `;
+        }
+
+        function renderPotentiometerSVG(comp) {
+            const rot = comp.props.rotation || 135;
+            return `
+                <rect width="45" height="45" rx="6" fill="#0284c7" stroke="#0369a1" stroke-width="2"/>
+                <circle cx="22.5" cy="20" r="14" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2"/>
+                <line x1="22.5" y1="20" x2="${22.5 + 10 * Math.cos((rot - 90) * Math.PI / 180)}" y2="${20 + 10 * Math.sin((rot - 90) * Math.PI / 180)}" stroke="#0f172a" stroke-width="3" stroke-linecap="round"/>
+                
+                <text x="7.5" y="39" fill="#22c55e" font-size="9" font-weight="bold" text-anchor="middle">+</text>
+                <text x="22.5" y="39" fill="#38bdf8" font-size="7" font-weight="bold" text-anchor="middle">OUT</text>
+                <text x="37.5" y="39" fill="#ef4444" font-size="9" font-weight="bold" text-anchor="middle">-</text>
+
+                <circle class="pin-node" cx="7.5" cy="45" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'vcc')"/>
+                <circle class="pin-node" cx="22.5" cy="45" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'out')"/>
+                <circle class="pin-node" cx="37.5" cy="45" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'gnd')"/>
+            `;
+        }
+
+        function renderUltrasonicSVG(comp) {
+            return `
+                <rect width="90" height="50" rx="6" fill="#1e3a8a" stroke="#1d4ed8" stroke-width="2"/>
+                <circle cx="25" cy="22" r="16" fill="#94a3b8" stroke="#475569" stroke-width="2"/>
+                <circle cx="65" cy="22" r="16" fill="#94a3b8" stroke="#475569" stroke-width="2"/>
+                <text x="25" y="25" fill="#1e293b" font-size="9" font-weight="bold" text-anchor="middle">T</text>
+                <text x="65" y="25" fill="#1e293b" font-size="9" font-weight="bold" text-anchor="middle">R</text>
+                
+                <text x="25" y="44" fill="#22c55e" font-size="9" font-weight="bold" text-anchor="middle">+</text>
+                <text x="38" y="44" fill="#cbd5e1" font-size="7" font-weight="bold" text-anchor="middle">Trig</text>
+                <text x="51" y="44" fill="#cbd5e1" font-size="7" font-weight="bold" text-anchor="middle">Echo</text>
+                <text x="64" y="44" fill="#ef4444" font-size="9" font-weight="bold" text-anchor="middle">-</text>
+
+                <circle class="pin-node" cx="25" cy="50" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'vcc')"/>
+                <circle class="pin-node" cx="38" cy="50" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'trig')"/>
+                <circle class="pin-node" cx="51" cy="50" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'echo')"/>
+                <circle class="pin-node" cx="64" cy="50" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'gnd')"/>
+            `;
+        }
+
+        function renderLDRSVG(comp) {
+            return `
+                <circle cx="20" cy="20" r="18" fill="#b91c1c" stroke="#7f1d1d" stroke-width="2"/>
+                <path d="M 10 15 Q 20 10 30 15 Q 20 20 10 25 Q 20 30 30 25" fill="none" stroke="#fde047" stroke-width="2"/>
+                <circle class="pin-node" cx="10" cy="38" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'p1')"/>
+                <circle class="pin-node" cx="30" cy="38" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'p2')"/>
+            `;
+        }
+
+        function renderPiezoSVG(comp) {
+            const isActive = state.pinStates[`${comp.id}-active`]?.value === 1 || state.pinStates[`ard1-D8`]?.value === 1;
+
+            return `
+                <circle cx="25" cy="25" r="22" fill="${isActive ? '#f59e0b' : '#0f172a'}" stroke="${isActive ? '#fbbf24' : '#334155'}" stroke-width="2" filter="${isActive ? 'url(#glow-yellow)' : ''}"/>
+                <circle cx="25" cy="25" r="8" fill="#334155"/>
+                
+                ${isActive ? `
+                    <path d="M 5 25 A 20 20 0 0 1 45 25" fill="none" stroke="#fef08a" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M 0 25 A 25 25 0 0 1 50 25" fill="none" stroke="#fef08a" stroke-width="1.5" stroke-dasharray="3,3"/>
+                ` : ''}
+
+                <rect x="10" y="32" width="10" height="10" rx="2" fill="#0f172a" stroke="#22c55e" stroke-width="1"/>
+                <text x="15" y="39.5" fill="#22c55e" font-size="9" font-weight="bold" text-anchor="middle">+</text>
+
+                <rect x="30" y="32" width="10" height="10" rx="2" fill="#0f172a" stroke="#ef4444" stroke-width="1"/>
+                <text x="35" y="39.5" fill="#ef4444" font-size="9" font-weight="bold" text-anchor="middle">-</text>
+
+                <circle class="pin-node" cx="15" cy="47" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'pos')"/>
+                <circle class="pin-node" cx="35" cy="47" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'neg')"/>
+            `;
+        }
+
+        function renderServoSVG(comp) {
+            return `
+                <rect width="60" height="35" rx="4" fill="#2563eb" stroke="#1d4ed8" stroke-width="2"/>
+                <circle cx="20" cy="17.5" r="10" fill="#ffffff"/>
+                <rect x="15" y="15" width="30" height="5" fill="#ffffff" rx="2"/>
+
+                <text x="10" y="29" fill="#ef4444" font-size="9" font-weight="bold" text-anchor="middle">-</text>
+                <text x="20" y="29" fill="#22c55e" font-size="9" font-weight="bold" text-anchor="middle">+</text>
+                <text x="30" y="29" fill="#38bdf8" font-size="7" font-weight="bold" text-anchor="middle">SIG</text>
+
+                <circle class="pin-node" cx="10" cy="35" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'gnd')"/>
+                <circle class="pin-node" cx="20" cy="35" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'vcc')"/>
+                <circle class="pin-node" cx="30" cy="35" r="3.5" fill="#38bdf8" onclick="handlePinClick(event, '${comp.id}', 'sig')"/>
+            `;
+        }
+
+        function handlePinClick(e, compId, pinId) {
+            e.stopPropagation();
+            if (state.isSimulating) return; // Bloqueia criação de fios durante simulação
+
+            if (!state.isDrawingWire) {
+                state.isDrawingWire = true;
+                state.wireStartPin = { compId, pinId };
+
+                const p = getPinCoordinates(compId, pinId);
+                const draft = document.getElementById('wire-draft');
+                draft.setAttribute('x1', p.x);
+                draft.setAttribute('y1', p.y);
+                draft.setAttribute('x2', p.x);
+                draft.setAttribute('y2', p.y);
+                draft.setAttribute('stroke', state.activeWireColor);
+                draft.classList.remove('hidden');
+            } else {
+                if (state.wireStartPin.compId === compId && state.wireStartPin.pinId === pinId) {
+                    cancelCurrentAction();
+                    return;
+                }
+
+                state.wires.push({
+                    id: 'wire_' + Date.now(),
+                    fromCompId: state.wireStartPin.compId,
+                    fromPinId: state.wireStartPin.pinId,
+                    toCompId: compId,
+                    toPinId: pinId,
+                    color: state.activeWireColor
+                });
+
+                state.isDrawingWire = false;
+                state.wireStartPin = null;
+                document.getElementById('wire-draft').classList.add('hidden');
+
+                renderAll();
+            }
+        }
+
+        function handleCanvasMouseMove(e) {
+            if (!state.isDrawingWire) return;
+            const rect = document.getElementById('circuit-svg').getBoundingClientRect();
+            const draft = document.getElementById('wire-draft');
+            draft.setAttribute('x2', e.clientX - rect.left);
+            draft.setAttribute('y2', e.clientY - rect.top);
+        }
+
+        function getPinCoordinates(compId, pinId) {
+            const comp = state.components.find(c => c.id === compId);
+            if (!comp) return { x: 0, y: 0 };
+
+            let relX = 0, relY = 0;
+
+            if (comp.type === 'arduino_uno') {
+                const digLeft = { 'SCL': 80, 'SDA': 90, 'AREF': 100, 'GND2': 110, 'D13': 120, 'D12': 130, 'D11': 140, 'D10': 150, 'D9': 160, 'D8': 170 };
+                const digRight = { 'D7': 190, 'D6': 200, 'D5': 210, 'D4': 220, 'D3': 230, 'D2': 240, 'D1': 250, 'D0': 260 };
+                const powPins = { 'IOREF': 100, 'RESET': 110, '3.3V': 120, '5V': 130, 'GND': 140, 'GND1': 150, 'VIN': 160 };
+                const anaPins = { 'A0': 190, 'A1': 200, 'A2': 210, 'A3': 220, 'A4': 230, 'A5': 240 };
+
+                if (digLeft[pinId] !== undefined) { relX = digLeft[pinId]; relY = 15; }
+                else if (digRight[pinId] !== undefined) { relX = digRight[pinId]; relY = 15; }
+                else if (powPins[pinId] !== undefined) { relX = powPins[pinId]; relY = 175; }
+                else if (anaPins[pinId] !== undefined) { relX = anaPins[pinId]; relY = 175; }
+            } else if (comp.type.startsWith('led')) {
+                relX = pinId === 'cathode' ? 12 : 26;
+                relY = 55;
+            } else if (comp.type === 'resistor') {
+                relX = pinId === 'p1' ? 0 : 60;
+                relY = 10;
+            } else if (comp.type === 'pushbutton') {
+                relX = (pinId === 'a1' || pinId === 'a2') ? 0 : 40;
+                relY = (pinId === 'a1' || pinId === 'b1') ? 10 : 30;
+            } else if (comp.type === 'potentiometer') {
+                relX = pinId === 'vcc' ? 7.5 : (pinId === 'out' ? 22.5 : 37.5);
+                relY = 45;
+            } else if (comp.type === 'ultrasonic') {
+                const map = { 'vcc': 25, 'trig': 38, 'echo': 51, 'gnd': 64 };
+                relX = map[pinId] || 25;
+                relY = 50;
+            } else if (comp.type === 'piezo') {
+                relX = pinId === 'pos' ? 15 : 35;
+                relY = 47;
+            } else if (comp.type === 'breadboard' || comp.type === 'breadboard_mini') {
+                const parts = pinId.split('_');
+                const type = parts[0];
+                if (type.startsWith('pt') || type.startsWith('pb')) {
+                    const c = parseInt(parts[1]);
+                    relX = 20 + c * 10;
+                    if (type === 'ptn') relY = 20;
+                    else if (type === 'ptp') relY = 30;
+                    else if (type === 'pbn') relY = 180;
+                    else if (type === 'pbp') relY = 190;
+                } else {
+                    const c = parseInt(parts[1]);
+                    const r = parseInt(parts[2]);
+                    relX = 20 + c * 10;
+                    if (type === 'tt') relY = 40 + r * 10;
+                    else if (type === 'tb') relY = 110 + r * 10;
+                }
+            } else {
+                relX = 20; relY = 20;
+            }
+
+            return { x: comp.x + relX, y: comp.y + relY };
+        }
+
+        let dragTarget = null;
+        let dragOffset = { x: 0, y: 0 };
+
+        function startComponentDrag(e, comp) {
+            if (state.isSimulating) return; // Bloqueia movimento do componente durante simulação
+            if (state.isDrawingWire) return;
+            dragTarget = comp;
+            dragOffset = { x: e.clientX - comp.x, y: e.clientY - comp.y };
+
+            const handleMove = (ev) => {
+                if (!dragTarget) return;
+                dragTarget.x = Math.max(0, ev.clientX - dragOffset.x);
+                dragTarget.y = Math.max(0, ev.clientY - dragOffset.y);
+                renderAll();
+            };
+
+            const handleUp = () => {
+                dragTarget = null;
+                window.removeEventListener('mousemove', handleMove);
+                window.removeEventListener('mouseup', handleUp);
+            };
+
+            window.addEventListener('mousemove', handleMove);
+            window.addEventListener('mouseup', handleUp);
+        }
+
+        function selectComponent(id) {
+            state.selectedComponentId = id;
+            state.selectedWireId = null;
+            openInspector(id);
+            renderAll();
+        }
+
+        function selectWire(e, wireId) {
+            e.stopPropagation();
+            state.selectedWireId = wireId;
+            state.selectedComponentId = null;
+            openWireInspector(wireId);
+            renderAll();
+        }
+
+        function openInspector(id) {
+            const comp = state.components.find(c => c.id === id);
+            if (!comp) return;
+
+            const panel = document.getElementById('inspector-panel');
+            const content = document.getElementById('inspector-content');
+            document.getElementById('inspector-title').innerHTML = `<i class="fa-solid fa-sliders text-cyan-400"></i> ${comp.name}`;
+
+            panel.classList.remove('hidden');
+
+            const elec = state.elecStates[comp.id] || {};
+
+            let html = `
+                <div>
+                    <label class="block text-slate-400 text-[11px] mb-1">Nome do Componente</label>
+                    <input type="text" value="${comp.name}" onchange="updateCompName('${comp.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 focus:outline-none">
+                </div>
+            `;
+
+            if (comp.type === 'resistor') {
+                const disabledAttr = state.isSimulating ? 'disabled' : '';
+                html += `
+                    <div>
+                        <label class="block text-slate-300 text-[11px] font-semibold mb-1">Resistência (Lei de Ohm)</label>
+                        <div class="flex space-x-2">
+                            <input type="number" min="1" max="1000000" value="${comp.props.resistance || 220}" onchange="updateCompProp('${comp.id}', 'resistance', parseFloat(this.value));" class="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 font-mono focus:outline-none focus:border-cyan-500" ${disabledAttr}>
+                            <span class="bg-slate-800 border border-slate-700 text-slate-300 px-2 py-1 rounded font-mono text-xs flex items-center">Ω</span>
+                        </div>
+                    </div>
+                `;
+            } else if (comp.type === 'ultrasonic') {
+                html += `
+                    <div>
+                        <div class="flex justify-between text-slate-300 mb-1">
+                            <span>Distância Simulação</span>
+                            <span id="dist-val">${comp.props.distance} cm</span>
+                        </div>
+                        <input type="range" min="2" max="400" value="${comp.props.distance}" oninput="updateCompProp('${comp.id}', 'distance', parseInt(this.value)); document.getElementById('dist-val').innerText = this.value + ' cm';" class="w-full accent-cyan-500">
+                    </div>
+                `;
+            } else if (comp.type === 'potentiometer') {
+                html += `
+                    <div>
+                        <div class="flex justify-between text-slate-300 mb-1">
+                            <span>Divisor de Tensão (Dial)</span>
+                            <span id="pot-val">${comp.props.rotation}°</span>
+                        </div>
+                        <input type="range" min="0" max="270" value="${comp.props.rotation}" oninput="updateCompProp('${comp.id}', 'rotation', parseInt(this.value)); document.getElementById('pot-val').innerText = this.value + '°';" class="w-full accent-cyan-500">
+                    </div>
+                `;
+            } else if (comp.type === 'ldr') {
+                html += `
+                    <div>
+                        <div class="flex justify-between text-slate-300 mb-1">
+                            <span>Luminosidade (Lux)</span>
+                            <span id="ldr-val">${comp.props.light || 50}%</span>
+                        </div>
+                        <input type="range" min="0" max="100" value="${comp.props.light || 50}" oninput="updateCompProp('${comp.id}', 'light', parseInt(this.value)); document.getElementById('ldr-val').innerText = this.value + '%';" class="w-full accent-cyan-500">
+                    </div>
+                `;
+            }
+
+            if (state.isSimulating) {
+                html += `
+                    <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 space-y-1">
+                        <div class="text-[11px] font-semibold text-cyan-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-bolt"></i> Multímetro Virtual
+                        </div>
+                        <div class="flex justify-between text-[11px]">
+                            <span class="text-slate-400">Tensão (V):</span>
+                            <span class="font-mono text-emerald-400">${elec.voltage || 0} V</span>
+                        </div>
+                        <div class="flex justify-between text-[11px]">
+                            <span class="text-slate-400">Corrente (I):</span>
+                            <span class="font-mono ${elec.burnt ? 'text-rose-400 font-bold' : 'text-amber-400'}">${elec.currentMa || 0} mA</span>
+                        </div>
+                        <div class="flex justify-between text-[11px]">
+                            <span class="text-slate-400">Potência (P):</span>
+                            <span class="font-mono text-slate-300">${elec.powerMw || 0} mW</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (!state.isSimulating) {
+                html += `
+                    <button onclick="deleteComponent('${comp.id}')" class="w-full bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/60 py-1.5 rounded transition-all mt-2 font-medium">
+                        <i class="fa-solid fa-trash-can mr-1"></i> Remover Componente
+                    </button>
+                `;
+            }
+
+            content.innerHTML = html;
+        }
+
+        function openWireInspector(wireId) {
+            const wire = state.wires.find(w => w.id === wireId);
+            if (!wire) return;
+
+            const panel = document.getElementById('inspector-panel');
+            const content = document.getElementById('inspector-content');
+            document.getElementById('inspector-title').innerHTML = `<i class="fa-solid fa-code-branch text-cyan-400"></i> Fio Jumper`;
+
+            panel.classList.remove('hidden');
+
+            let html = `
+                <div class="space-y-2">
+                    <p class="text-slate-300">Conectado de <b class="text-cyan-400">${wire.fromPinId}</b> para <b class="text-cyan-400">${wire.toPinId}</b></p>
+            `;
+
+            if (!state.isSimulating) {
+                html += `
+                    <button onclick="deleteWire('${wire.id}')" class="w-full bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/60 py-1.5 rounded transition-all mt-2 font-medium">
+                        <i class="fa-solid fa-trash-can mr-1"></i> Deletar Fio
+                    </button>
+                `;
+            }
+
+            html += `</div>`;
+            content.innerHTML = html;
+        }
+
+        function closeInspector() {
+            document.getElementById('inspector-panel').classList.add('hidden');
+        }
+
+        function updateCompProp(id, key, value) {
+            const comp = state.components.find(c => c.id === id);
+            if (comp) {
+                comp.props[key] = value;
+                renderAll();
+            }
+        }
+
+        function updateCompName(id, val) {
+            const comp = state.components.find(c => c.id === id);
+            if (comp) comp.name = val;
+        }
+
+        function deleteComponent(id) {
+            state.components = state.components.filter(c => c.id !== id);
+            state.wires = state.wires.filter(w => w.fromCompId !== id && w.toCompId !== id);
+            closeInspector();
+            renderAll();
+        }
+
+        function deleteWire(id) {
+            state.wires = state.wires.filter(w => w.id !== id);
+            closeInspector();
+            renderAll();
+        }
+
+        function clearCanvas() {
+            if (state.isSimulating) return; // Bloqueia limpar a tela durante a simulação
+            state.components = [
+                { id: 'ard1', type: 'arduino_uno', x: 220, y: 110, name: 'Arduino Uno R3' }
+            ];
+            state.wires = [];
+            closeInspector();
+            renderAll();
+        }
+
+        async function toggleSimulation() {
+            if (state.isSimulating) {
+                stopSimulation();
+            } else {
+                startSimulation();
+            }
+        }
+
+        function startSimulation() {
+            state.isSimulating = true;
+            document.body.classList.add('is-simulating');
+            
+            const btnClear = document.getElementById('btn-clear');
+            if (btnClear) {
+                btnClear.disabled = true;
+                btnClear.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+
+            document.getElementById('btn-start').innerHTML = `<i class="fa-solid fa-stop"></i><span>Parar Simulação</span>`;
+            document.getElementById('btn-start').className = `bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-white font-medium text-xs px-4 py-2 rounded-lg transition-all flex items-center space-x-2 shadow-md shadow-rose-900/40`;
+
+            // Ativa Web Audio no click do usuário
+            if (!state.audioCtx) {
+                state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (state.audioCtx.state === 'suspended') {
+                state.audioCtx.resume();
+            }
+
+            logSerial('[Simulador] Simulação e Leis de Ohm ativas.');
+            runArduinoCode();
+        }
+
+        function stopSimulation() {
+            state.isSimulating = false;
+            document.body.classList.remove('is-simulating');
+            
+            const btnClear = document.getElementById('btn-clear');
+            if (btnClear) {
+                btnClear.disabled = false;
+                btnClear.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+
+            document.getElementById('btn-start').innerHTML = `<i class="fa-solid fa-play"></i><span>Iniciar Simulação</span>`;
+            document.getElementById('btn-start').className = `bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-medium text-xs px-4 py-2 rounded-lg transition-all flex items-center space-x-2 shadow-md shadow-emerald-900/40`;
+
+            state.simulationTimeouts.forEach(clearTimeout);
+            state.simulationTimeouts = [];
+            state.pinStates = {};
+            state.elecStates = {};
+
+            stopPiezoSound();
+            renderAll();
+            logSerial('[Simulador] Simulação interrompida.');
+        }
+
+        function resetSimulation() {
+            stopSimulation();
+            setTimeout(startSimulation, 100);
+        }
+
+        async function runArduinoCode() {
+            const rawCode = document.getElementById('code-editor').value;
+
+            let jsCode = rawCode
+                .replace(/void\s+setup\s*\(\s*\)/g, 'async function setup()')
+                .replace(/void\s+loop\s*\(\s*\)/g, 'async function loop()')
+                .replace(/pinMode\((.*?)\);/g, 'board.pinMode($1);')
+                .replace(/digitalWrite\((.*?)\);/g, 'await board.digitalWrite($1);')
+                .replace(/digitalRead\((.*?)\)/g, 'await board.digitalRead($1)')
+                .replace(/analogWrite\((.*?)\);/g, 'await board.analogWrite($1);')
+                .replace(/analogRead\((.*?)\)/g, 'await board.analogRead($1)')
+                .replace(/delayMicroseconds\((.*?)\);/g, 'await board.delayMicroseconds($1);')
+                .replace(/delay\((.*?)\);/g, 'await board.delay($1);')
+                .replace(/tone\((.*?)\);/g, 'board.tone($1);')
+                .replace(/noTone\((.*?)\);/g, 'board.noTone($1);')
+                .replace(/Serial\.begin\((.*?)\);/g, '// Serial ready')
+                .replace(/Serial\.println\((.*?)\);/g, 'board.serialPrintln($1);')
+                .replace(/Serial\.print\((.*?)\);/g, 'board.serialPrint($1);');
+
+            const board = {
+                pinMode: (pin, mode) => {
+                    const key = `ard1-D${pin}`;
+                    state.pinStates[key] = { mode, value: 0 };
+                },
+                digitalWrite: async (pin, val) => {
+                    const key = `ard1-D${pin}`;
+                    const numVal = val === 'HIGH' || val === 1 ? 1 : 0;
+                    state.pinStates[key] = { mode: 'OUTPUT', value: numVal };
+                    renderAll();
+                },
+                digitalRead: async (pin) => {
+                    const key = `ard1-D${pin}`;
+                    if (state.pinStates[key] && state.pinStates[key].mode === 'OUTPUT') {
+                        return state.pinStates[key].value;
+                    }
+                    let v = state.nodeVoltages[`D${pin}`];
+                    if (v !== null && v !== undefined) return v > 2.5 ? 1 : 0;
+                    
+                    if (state.pinStates[key] && state.pinStates[key].mode === 'INPUT_PULLUP') return 1;
+                    return 0; // Floating
+                },
+                analogRead: async (pin) => {
+                    let v = state.nodeVoltages[`A${pin}`];
+                    if (v !== null && v !== undefined) return Math.round((v / 5.0) * 1023);
+                    return 512; // Floating default
+                },
+                analogWrite: async (pin, val) => {
+                    const key = `ard1-D${pin}`;
+                    // Simplificação: Transforma PWM > 127 em HIGH
+                    state.pinStates[key] = { mode: 'OUTPUT', value: val > 127 ? 1 : 0 };
+                    renderAll();
+                },
+                delay: async (ms) => {
+                    return new Promise(resolve => {
+                        const t = setTimeout(resolve, ms);
+                        state.simulationTimeouts.push(t);
+                    });
+                },
+                delayMicroseconds: async (us) => {
+                    return new Promise(resolve => {
+                        const t = setTimeout(resolve, us / 1000);
+                        state.simulationTimeouts.push(t);
+                    });
+                },
+                tone: (pin, freq) => {
+                    state.pinStates[`ard1-D${pin}`] = { mode: 'OUTPUT', value: 1 };
+                    startPiezoSound(freq || 440);
+                    renderAll();
+                },
+                noTone: (pin) => {
+                    state.pinStates[`ard1-D${pin}`] = { mode: 'OUTPUT', value: 0 };
+                    stopPiezoSound();
+                    renderAll();
+                },
+                serialPrintln: (msg) => logSerial(msg),
+                serialPrint: (msg) => logSerial(msg, false)
+            };
+
+            const CONSTANTS = { OUTPUT: 'OUTPUT', INPUT: 'INPUT', INPUT_PULLUP: 'INPUT_PULLUP', HIGH: 1, LOW: 0, A0: 0, A1: 1, A2: 2, A3: 3, A4: 4, A5: 5 };
+            
+            function map(x, in_min, in_max, out_min, out_max) {
+                return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+            }
+            function constrain(x, a, b) {
+                return x < a ? a : (x > b ? b : x);
+            }
+
+            try {
+                const runner = new Function('board', 'OUTPUT', 'INPUT', 'INPUT_PULLUP', 'HIGH', 'LOW', 'A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'map', 'constrain', 'state', `
+                    ${jsCode}
+                    return { setup, loop };
+                `);
+
+                const { setup, loop } = runner(board, CONSTANTS.OUTPUT, CONSTANTS.INPUT, CONSTANTS.INPUT_PULLUP, CONSTANTS.HIGH, CONSTANTS.LOW, CONSTANTS.A0, CONSTANTS.A1, CONSTANTS.A2, CONSTANTS.A3, CONSTANTS.A4, CONSTANTS.A5, map, constrain, state);
+
+                if (setup) await setup();
+
+                while (state.isSimulating && loop) {
+                    await loop();
+                    await new Promise(r => setTimeout(r, 10));
+                }
+            } catch (err) {
+                logSerial(`[Erro de Código]: ${err.message}`);
+                stopSimulation();
+            }
+        }
+
+        function startPiezoSound(freq) {
+            if (!state.audioCtx || state.audioCtx.state !== 'running') return;
+            if (state.piezoOsc) return; // Ja esta tocando
+
+            state.piezoOsc = state.audioCtx.createOscillator();
+            const gain = state.audioCtx.createGain();
+            state.piezoOsc.type = 'square';
+            state.piezoOsc.frequency.setValueAtTime(freq, state.audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.05, state.audioCtx.currentTime);
+            
+            state.piezoOsc.connect(gain);
+            gain.connect(state.audioCtx.destination);
+            state.piezoOsc.start();
+        }
+
+        function stopPiezoSound() {
+            if (state.piezoOsc) {
+                try { state.piezoOsc.stop(); } catch(e){}
+                state.piezoOsc = null;
+            }
+        }
+
+        function logSerial(msg, newline = true) {
+            const out = document.getElementById('serial-output');
+            out.innerText += (newline ? '\n' : '') + msg;
+            out.scrollTop = out.scrollHeight;
+        }
+
+        function clearSerialLog() {
+            document.getElementById('serial-output').innerText = '--- Monitor Serial Limpo ---';
+        }
+
+        function toggleSerialMonitor() {
+            const drawer = document.getElementById('serial-drawer');
+            drawer.classList.toggle('hidden');
+        }
+
+        function loadPresetCode(key) {
+            const editor = document.getElementById('code-editor');
+            switch (key) {
+                case 'blink':
+                    editor.value = `// Blink LED 13
+void setup() {
+  pinMode(13, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(13, HIGH);
+  delay(1000);
+  digitalWrite(13, LOW);
+  delay(1000);
+}`;
+                    break;
+                case 'fade':
+                    editor.value = `// Fade PWM
+void setup() {
+  pinMode(9, OUTPUT);
+}
+
+void loop() {
+  for (int i = 0; i <= 255; i += 5) {
+    analogWrite(9, i);
+    delay(30);
+  }
+}`;
+                    break;
+                case 'pot_led':
+                    editor.value = `// Divisor de Tensao
+void setup() {
+  Serial.begin(9600);
+  pinMode(13, OUTPUT);
+}
+
+void loop() {
+  int val = analogRead(A0);
+  Serial.print("Leitura ADC: ");
+  Serial.println(val);
+  
+  if (val > 512) {
+    digitalWrite(13, HIGH);
+  } else {
+    digitalWrite(13, LOW);
+  }
+  delay(200);
+}`;
+                    break;
+                case 'piezo':
+                    editor.value = `// Buzzer Piezo com Notas
+void setup() {
+  pinMode(8, OUTPUT);
+}
+
+void loop() {
+  tone(8, 440);
+  delay(500);
+  tone(8, 880);
+  delay(500);
+  noTone(8);
+  delay(500);
+}`;
+                    break;
+            }
+        }
+    </script>
+</body>
+</html>
