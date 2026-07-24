@@ -179,6 +179,14 @@
                         <feGaussianBlur stdDeviation="4" result="blur" />
                         <feComposite in="SourceGraphic" in2="blur" operator="over" />
                     </filter>
+                    <filter id="glow-blue" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                    <filter id="glow-white" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
                 </defs>
 
                 <!-- Grid Background visual -->
@@ -288,8 +296,7 @@ void loop() {
         const PALETTE = [
             { type: 'arduino_uno', name: 'Arduino Uno R3', icon: 'fa-microchip', category: 'Placas' },
             { type: 'breadboard', name: 'Protoboard (400 pts)', icon: 'fa-border-all', category: 'Placas' },
-            { type: 'led', name: 'LED (Vermelho)', icon: 'fa-lightbulb', category: 'Saídas', color: '#ef4444' },
-            { type: 'led_green', name: 'LED (Verde)', icon: 'fa-lightbulb', category: 'Saídas', color: '#22c55e' },
+            { type: 'led', name: 'LED', icon: 'fa-lightbulb', category: 'Saídas' },
             { type: 'resistor', name: 'Resistor', icon: 'fa-wave-square', category: 'Passivos' },
             { type: 'pushbutton', name: 'Push Button', icon: 'fa-circle-dot', category: 'Entradas' },
             { type: 'potentiometer', name: 'Potenciômetro 10k', icon: 'fa-sliders', category: 'Entradas' },
@@ -408,7 +415,8 @@ void loop() {
                     distance: 50,
                     light: 300,
                     rotation: 135, // potentiometer dial midpoint
-                    state: 0
+                    state: 0,
+                    color: type === 'led' ? 'red' : undefined
                 }
             });
 
@@ -718,8 +726,7 @@ void loop() {
                 case 'arduino_uno': return renderArduinoUnoSVG(comp);
                 case 'breadboard':
                 case 'breadboard_mini': return renderBreadboardSVG(comp);
-                case 'led':
-                case 'led_green': return renderLEDSVG(comp);
+                case 'led': return renderLEDSVG(comp);
                 case 'resistor': return renderResistorSVG(comp);
                 case 'pushbutton': return renderPushButtonSVG(comp);
                 case 'potentiometer': return renderPotentiometerSVG(comp);
@@ -921,9 +928,16 @@ void loop() {
         }
 
         function renderLEDSVG(comp) {
-            const isGreen = comp.type === 'led_green';
-            const baseColor = isGreen ? '#22c55e' : '#ef4444';
-            const glowFilter = isGreen ? 'url(#glow-green)' : 'url(#glow-red)';
+            const colorKey = comp.props.color || 'red';
+            const LED_COLORS = {
+                'red': { hex: '#ef4444', filter: 'url(#glow-red)' },
+                'yellow': { hex: '#eab308', filter: 'url(#glow-yellow)' },
+                'blue': { hex: '#3b82f6', filter: 'url(#glow-blue)' },
+                'green': { hex: '#22c55e', filter: 'url(#glow-green)' },
+                'white': { hex: '#f8fafc', filter: 'url(#glow-white)' }
+            };
+            const baseColor = LED_COLORS[colorKey].hex;
+            const glowFilter = LED_COLORS[colorKey].filter;
 
             const elec = state.elecStates[comp.id] || {};
             const isBurnt = elec.burnt;
@@ -1283,6 +1297,20 @@ void loop() {
                         <div class="flex space-x-2">
                             <input type="number" min="1" max="1000000" value="${comp.props.resistance || 220}" onchange="updateCompProp('${comp.id}', 'resistance', parseFloat(this.value));" class="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 font-mono focus:outline-none focus:border-cyan-500" ${disabledAttr}>
                             <span class="bg-slate-800 border border-slate-700 text-slate-300 px-2 py-1 rounded font-mono text-xs flex items-center">Ω</span>
+                        </div>
+                    </div>
+                `;
+            } else if (comp.type === 'led') {
+                const disabledClass = state.isSimulating ? 'opacity-50 cursor-not-allowed pointer-events-none' : '';
+                html += `
+                    <div>
+                        <label class="block text-slate-300 text-[11px] font-semibold mb-1">Cor do LED</label>
+                        <div class="flex space-x-2 ${disabledClass}">
+                            <button onclick="updateCompProp('${comp.id}', 'color', 'red'); openInspector('${comp.id}')" class="w-6 h-6 rounded-full bg-red-500 ring-2 ring-offset-1 ring-offset-slate-800 ${comp.props.color === 'red' ? 'ring-cyan-400' : 'ring-transparent hover:ring-slate-500'}" title="Vermelho"></button>
+                            <button onclick="updateCompProp('${comp.id}', 'color', 'yellow'); openInspector('${comp.id}')" class="w-6 h-6 rounded-full bg-yellow-500 ring-2 ring-offset-1 ring-offset-slate-800 ${comp.props.color === 'yellow' ? 'ring-cyan-400' : 'ring-transparent hover:ring-slate-500'}" title="Amarelo"></button>
+                            <button onclick="updateCompProp('${comp.id}', 'color', 'green'); openInspector('${comp.id}')" class="w-6 h-6 rounded-full bg-green-500 ring-2 ring-offset-1 ring-offset-slate-800 ${comp.props.color === 'green' ? 'ring-cyan-400' : 'ring-transparent hover:ring-slate-500'}" title="Verde"></button>
+                            <button onclick="updateCompProp('${comp.id}', 'color', 'blue'); openInspector('${comp.id}')" class="w-6 h-6 rounded-full bg-blue-500 ring-2 ring-offset-1 ring-offset-slate-800 ${comp.props.color === 'blue' ? 'ring-cyan-400' : 'ring-transparent hover:ring-slate-500'}" title="Azul"></button>
+                            <button onclick="updateCompProp('${comp.id}', 'color', 'white'); openInspector('${comp.id}')" class="w-6 h-6 rounded-full bg-slate-200 ring-2 ring-offset-1 ring-offset-slate-800 ${comp.props.color === 'white' ? 'ring-cyan-400' : 'ring-transparent hover:ring-slate-500'}" title="Branco"></button>
                         </div>
                     </div>
                 `;
