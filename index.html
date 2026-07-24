@@ -1,10 +1,15 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="h-full bg-slate-900 text-slate-100">
+<html lang="pt-BR" class="h-full dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulator de Arduino - OscarINO</title>
+    <title>TinkerArduino Simulator</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
@@ -20,9 +25,14 @@
         }
 
         .grid-bg {
+            background-color: #f8fafc;
+            background-image: radial-gradient(#cbd5e1 1.2px, transparent 1.2px);
+            background-size: 20px 20px;
+        }
+        
+        .dark .grid-bg {
             background-color: #0f172a;
             background-image: radial-gradient(#334155 1.2px, transparent 1.2px);
-            background-size: 20px 20px;
         }
 
         /* STRICT PIN HOVER: Hand cursor + Bright Red Glow (Only when NOT simulating) */
@@ -77,13 +87,22 @@
             height: 6px;
         }
         ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .dark ::-webkit-scrollbar-track {
             background: #1e293b;
         }
         ::-webkit-scrollbar-thumb {
-            background: #475569;
+            background: #cbd5e1;
             border-radius: 3px;
         }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
         ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .dark ::-webkit-scrollbar-thumb:hover {
             background: #64748b;
         }
 
@@ -96,16 +115,16 @@
         }
     </style>
 </head>
-<body class="h-full flex flex-col overflow-hidden select-none bg-slate-900 text-slate-100">
+<body class="h-full flex flex-col overflow-hidden select-none bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-200">
 
-    <header class="h-14 bg-slate-800 border-b border-slate-700/80 px-4 flex items-center justify-between z-20 shrink-0">
+    <header class="h-14 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700/80 px-4 flex items-center justify-between z-20 shrink-0 transition-colors duration-200">
         <div class="flex items-center space-x-3">
             <div class="bg-cyan-500 text-slate-950 p-2 rounded-lg font-black text-lg flex items-center justify-center w-9 h-9 shadow-lg shadow-cyan-500/20">
                 <i class="fa-solid fa-microchip"></i>
             </div>
             <div>
-                <h1 class="font-bold text-slate-100 text-base leading-tight tracking-wide">TinkerArduino <span class="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono ml-1">Lei de Ohm v3.0</span></h1>
-                <p class="text-xs text-slate-400">Física Elétrica, Áudio Real e Componentes Dinâmicos</p>
+                <h1 class="font-bold text-slate-800 dark:text-slate-100 text-base leading-tight tracking-wide">TinkerArduino <span class="text-xs bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30 px-1.5 py-0.5 rounded font-mono ml-1">Lei de Ohm v3.0</span></h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Física Elétrica, Áudio Real e Componentes Dinâmicos</p>
             </div>
         </div>
 
@@ -115,12 +134,12 @@
                 <i class="fa-solid fa-play"></i>
                 <span>Iniciar Simulação</span>
             </button>
-            <button id="btn-reset" onclick="resetSimulation()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium text-xs px-3 py-2 rounded-lg transition-all flex items-center space-x-1.5 border border-slate-600">
+            <button id="btn-reset" onclick="resetSimulation()" class="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium text-xs px-3 py-2 rounded-lg transition-all flex items-center space-x-1.5 border border-slate-300 dark:border-slate-600">
                 <i class="fa-solid fa-rotate-right"></i>
                 <span>Reiniciar</span>
             </button>
-            <div class="h-5 w-px bg-slate-700 mx-1"></div>
-            <button id="btn-clear" onclick="clearCanvas()" class="bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/50 font-medium text-xs px-3 py-2 rounded-lg transition-all flex items-center space-x-1.5">
+            <div class="h-5 w-px bg-slate-300 dark:bg-slate-700 mx-1"></div>
+            <button id="btn-clear" onclick="clearCanvas()" class="bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800/50 font-medium text-xs px-3 py-2 rounded-lg transition-all flex items-center space-x-1.5">
                 <i class="fa-solid fa-trash-can"></i>
                 <span>Limpar Canvas</span>
             </button>
@@ -128,18 +147,25 @@
 
         <!-- Wire Color Selector & Helper -->
         <div class="flex items-center space-x-3">
-            <div class="flex items-center space-x-1 bg-slate-900/80 p-1.5 rounded-lg border border-slate-700/60">
-                <span class="text-xs text-slate-400 mr-1.5 font-medium pl-1">Cor do Fio:</span>
-                <button onclick="setWireColor('#ef4444')" class="w-5 h-5 rounded-full bg-red-500 hover:scale-110 transition-transform ring-2 ring-offset-1 ring-offset-slate-900 ring-transparent focus:ring-red-400" title="Vermelho (VCC / 5V)"></button>
-                <button onclick="setWireColor('#000000')" class="w-5 h-5 rounded-full bg-black border border-slate-600 hover:scale-110 transition-transform ring-2 ring-offset-1 ring-offset-slate-900 ring-transparent focus:ring-slate-400" title="Preto (GND)"></button>
-                <button onclick="setWireColor('#3b82f6')" class="w-5 h-5 rounded-full bg-blue-500 hover:scale-110 transition-transform ring-2 ring-offset-1 ring-offset-slate-900 ring-transparent focus:ring-blue-400" title="Azul (Sinal)"></button>
-                <button onclick="setWireColor('#eab308')" class="w-5 h-5 rounded-full bg-yellow-500 hover:scale-110 transition-transform ring-2 ring-offset-1 ring-offset-slate-900 ring-transparent focus:ring-yellow-400" title="Amarelo (Sinal)"></button>
-                <button onclick="setWireColor('#22c55e')" class="w-5 h-5 rounded-full bg-green-500 hover:scale-110 transition-transform ring-2 ring-offset-1 ring-offset-slate-900 ring-transparent focus:ring-green-400" title="Verde"></button>
+            <div class="flex items-center space-x-1 bg-slate-100 dark:bg-slate-900/80 p-1.5 rounded-lg border border-slate-200 dark:border-slate-700/60 transition-colors duration-200">
+                <span class="text-xs text-slate-500 dark:text-slate-400 mr-1.5 font-medium pl-1">Cor do Fio:</span>
+                <button onclick="setWireColor('#ef4444')" class="w-5 h-5 rounded-full bg-red-500 hover:scale-110 transition-transform ring-2 ring-offset-1 ring-offset-white dark:ring-offset-slate-900 ring-transparent focus:ring-red-400" title="Vermelho (VCC / 5V)"></button>
+                <button onclick="setWireColor('#000000')" class="w-5 h-5 rounded-full bg-black border border-slate-400 dark:border-slate-600 hover:scale-110 transition-transform ring-2 ring-offset-1 ring-offset-white dark:ring-offset-slate-900 ring-transparent focus:ring-slate-400" title="Preto (GND)"></button>
+                <button onclick="setWireColor('#3b82f6')" class="w-5 h-5 rounded-full bg-blue-500 hover:scale-110 transition-transform ring-2 ring-offset-1 ring-offset-white dark:ring-offset-slate-900 ring-transparent focus:ring-blue-400" title="Azul (Sinal)"></button>
+                <button onclick="setWireColor('#eab308')" class="w-5 h-5 rounded-full bg-yellow-500 hover:scale-110 transition-transform ring-2 ring-offset-1 ring-offset-white dark:ring-offset-slate-900 ring-transparent focus:ring-yellow-400" title="Amarelo (Sinal)"></button>
+                <button onclick="setWireColor('#22c55e')" class="w-5 h-5 rounded-full bg-green-500 hover:scale-110 transition-transform ring-2 ring-offset-1 ring-offset-white dark:ring-offset-slate-900 ring-transparent focus:ring-green-400" title="Verde"></button>
             </div>
 
-            <button onclick="toggleSerialMonitor()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs px-3 py-2 rounded-lg border border-slate-600 flex items-center space-x-1.5">
-                <i class="fa-solid fa-terminal text-cyan-400"></i>
+            <button onclick="toggleSerialMonitor()" class="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 flex items-center space-x-1.5 transition-colors duration-200">
+                <i class="fa-solid fa-terminal text-cyan-600 dark:text-cyan-400"></i>
                 <span>Monitor Serial</span>
+            </button>
+            
+            <div class="h-5 w-px bg-slate-300 dark:bg-slate-700 mx-1"></div>
+            
+            <!-- Theme Toggle -->
+            <button onclick="toggleTheme()" class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors border border-slate-300 dark:border-slate-600" title="Alternar Tema">
+                <i id="theme-icon" class="fa-solid fa-sun"></i>
             </button>
         </div>
     </header>
@@ -147,12 +173,12 @@
     <div class="flex-1 flex overflow-hidden relative">
 
         <!-- Left Toolbar / Component Palette -->
-        <aside class="w-64 bg-slate-800/95 border-r border-slate-700/80 flex flex-col z-10 shrink-0">
-            <div class="p-3 border-b border-slate-700/80 bg-slate-800">
-                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Componentes</h2>
+        <aside class="w-64 bg-slate-50/95 dark:bg-slate-800/95 border-r border-slate-200 dark:border-slate-700/80 flex flex-col z-10 shrink-0 transition-colors duration-200">
+            <div class="p-3 border-b border-slate-200 dark:border-slate-700/80 bg-slate-100 dark:bg-slate-800 transition-colors duration-200">
+                <h2 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Componentes</h2>
                 <div class="relative">
-                    <input type="text" id="component-search" oninput="filterComponents()" placeholder="Buscar componente..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500">
-                    <i class="fa-solid fa-magnifying-glass absolute right-2.5 top-2 text-slate-500 text-xs"></i>
+                    <input type="text" id="component-search" oninput="filterComponents()" placeholder="Buscar componente..." class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors duration-200">
+                    <i class="fa-solid fa-magnifying-glass absolute right-2.5 top-2 text-slate-400 dark:text-slate-500 text-xs"></i>
                 </div>
             </div>
 
@@ -203,12 +229,12 @@
             </svg>
 
             <!-- Floating Controls Overlay / Inspector Panel -->
-            <div id="inspector-panel" class="hidden absolute top-4 left-4 bg-slate-800/90 backdrop-blur-md border border-slate-700 p-3.5 rounded-xl shadow-2xl z-20 w-80 text-xs">
-                <div class="flex items-center justify-between border-b border-slate-700 pb-2 mb-3">
-                    <h3 id="inspector-title" class="font-semibold text-slate-100 flex items-center gap-2">
-                        <i class="fa-solid fa-sliders text-cyan-400"></i> Propriedades
+            <div id="inspector-panel" class="hidden absolute top-4 left-4 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border border-slate-200 dark:border-slate-700 p-3.5 rounded-xl shadow-2xl z-20 w-80 text-xs transition-colors duration-200">
+                <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2 mb-3">
+                    <h3 id="inspector-title" class="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-cyan-600 dark:text-cyan-400"></i> Propriedades
                     </h3>
-                    <button onclick="closeInspector()" class="text-slate-400 hover:text-slate-200">
+                    <button onclick="closeInspector()" class="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
@@ -218,20 +244,20 @@
             </div>
 
             <!-- ESC Instruction Badge -->
-            <div class="absolute bottom-3 left-3 bg-slate-900/90 border border-slate-800 text-slate-400 text-[11px] px-3 py-1.5 rounded-lg backdrop-blur pointer-events-none flex items-center space-x-2 z-10 shadow-lg">
-                <span class="bg-slate-800 text-slate-200 font-mono px-1.5 py-0.5 rounded border border-slate-700 text-[10px]">ESC</span>
+            <div class="absolute bottom-3 left-3 bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-[11px] px-3 py-1.5 rounded-lg backdrop-blur pointer-events-none flex items-center space-x-2 z-10 shadow-lg transition-colors duration-200">
+                <span class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-mono px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-[10px]">ESC</span>
                 <span>Cancela ligação de fio ou seleção atual</span>
             </div>
         </main>
 
-        <aside class="w-96 bg-slate-900 border-l border-slate-700/80 flex flex-col z-10 shrink-0">
+        <aside class="w-96 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700/80 flex flex-col z-10 shrink-0 transition-colors duration-200">
             <!-- Code Header -->
-            <div class="h-10 bg-slate-800 border-b border-slate-700 px-3 flex items-center justify-between shrink-0">
+            <div class="h-10 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-3 flex items-center justify-between shrink-0 transition-colors duration-200">
                 <div class="flex items-center space-x-2">
-                    <i class="fa-solid fa-code text-cyan-400 text-xs"></i>
-                    <span class="text-xs font-semibold text-slate-200">Código C++</span>
+                    <i class="fa-solid fa-code text-cyan-600 dark:text-cyan-400 text-xs"></i>
+                    <span class="text-xs font-semibold text-slate-700 dark:text-slate-200">Código C++</span>
                 </div>
-                <select id="preset-select" onchange="loadPresetCode(this.value)" class="bg-slate-900 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1 focus:outline-none focus:border-cyan-500 w-36">
+                <select id="preset-select" onchange="loadPresetCode(this.value)" class="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 rounded px-2 py-1 focus:outline-none focus:border-cyan-500 w-36 transition-colors duration-200">
                     <option value="blink">Blink (LED 13)</option>
                     <option value="fade">Fade PWM</option>
                     <option value="pot_led">LDR / Potenciômetro</option>
@@ -240,8 +266,8 @@
             </div>
 
             <!-- Code Editor Box -->
-            <div class="flex-1 relative bg-slate-950 flex flex-col overflow-hidden">
-                <textarea id="code-editor" class="w-full h-full bg-slate-950 text-slate-200 code-font text-xs p-3 focus:outline-none resize-none leading-relaxed tracking-wide" spellcheck="false">// Exemplo Blink
+            <div class="flex-1 relative bg-slate-50 dark:bg-slate-950 flex flex-col overflow-hidden transition-colors duration-200">
+                <textarea id="code-editor" class="w-full h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 code-font text-xs p-3 focus:outline-none resize-none leading-relaxed tracking-wide transition-colors duration-200" spellcheck="false">// Exemplo Blink
 void setup() {
   pinMode(13, OUTPUT);
 }
@@ -255,14 +281,14 @@ void loop() {
             </div>
 
             <!-- Serial Monitor Drawer (Collapsible) -->
-            <div id="serial-drawer" class="h-48 border-t border-slate-700 bg-slate-950 flex flex-col shrink-0">
-                <div class="h-8 bg-slate-800 px-3 flex items-center justify-between border-b border-slate-700">
-                    <span class="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-                        <i class="fa-solid fa-terminal text-cyan-400"></i> Monitor Serial
+            <div id="serial-drawer" class="h-48 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 flex flex-col shrink-0 transition-colors duration-200">
+                <div class="h-8 bg-slate-100 dark:bg-slate-800 px-3 flex items-center justify-between border-b border-slate-200 dark:border-slate-700 transition-colors duration-200">
+                    <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-terminal text-cyan-600 dark:text-cyan-400"></i> Monitor Serial
                     </span>
-                    <button onclick="clearSerialLog()" class="text-[10px] bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded text-slate-300">Limpar</button>
+                    <button onclick="clearSerialLog()" class="text-[10px] bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 px-2 py-0.5 rounded text-slate-700 dark:text-slate-300 transition-colors">Limpar</button>
                 </div>
-                <div id="serial-output" class="flex-1 p-2 code-font text-xs text-emerald-400 overflow-y-auto whitespace-pre-wrap select-text">--- Monitor Serial Pronto ---</div>
+                <div id="serial-output" class="flex-1 p-2 code-font text-xs text-emerald-600 dark:text-emerald-400 overflow-y-auto whitespace-pre-wrap select-text transition-colors duration-200">--- Monitor Serial Pronto ---</div>
             </div>
         </aside>
     </div>
@@ -364,12 +390,12 @@ void loop() {
 
             PALETTE.forEach(item => {
                 const el = document.createElement('div');
-                el.className = 'flex items-center space-x-3 p-2 rounded-lg bg-slate-900/60 border border-slate-700/50 hover:bg-slate-700/60 hover:border-cyan-500/50 cursor-grab transition-all text-xs text-slate-200';
+                el.className = 'flex items-center space-x-3 p-2 rounded-lg bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/60 hover:border-cyan-500/50 cursor-grab transition-all text-xs text-slate-700 dark:text-slate-200';
                 el.draggable = true;
                 el.ondragstart = (e) => handleDragStart(e, item.type);
                 
                 el.innerHTML = `
-                    <div class="w-7 h-7 rounded-md bg-slate-800 flex items-center justify-center text-cyan-400 border border-slate-700 shrink-0">
+                    <div class="w-7 h-7 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-cyan-600 dark:text-cyan-400 border border-slate-200 dark:border-slate-700 shrink-0 transition-colors">
                         <i class="fa-solid ${item.icon}"></i>
                     </div>
                     <span class="font-medium truncate">${item.name}</span>
@@ -1276,7 +1302,7 @@ void loop() {
 
             const panel = document.getElementById('inspector-panel');
             const content = document.getElementById('inspector-content');
-            document.getElementById('inspector-title').innerHTML = `<i class="fa-solid fa-sliders text-cyan-400"></i> ${comp.name}`;
+            document.getElementById('inspector-title').innerHTML = `<i class="fa-solid fa-sliders text-cyan-600 dark:text-cyan-400"></i> ${comp.name}`;
 
             panel.classList.remove('hidden');
 
@@ -1284,8 +1310,8 @@ void loop() {
 
             let html = `
                 <div>
-                    <label class="block text-slate-400 text-[11px] mb-1">Nome do Componente</label>
-                    <input type="text" value="${comp.name}" onchange="updateCompName('${comp.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 focus:outline-none">
+                    <label class="block text-slate-500 dark:text-slate-400 text-[11px] mb-1">Nome do Componente</label>
+                    <input type="text" value="${comp.name}" onchange="updateCompName('${comp.id}', this.value)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-slate-800 dark:text-slate-200 focus:outline-none transition-colors">
                 </div>
             `;
 
@@ -1293,10 +1319,10 @@ void loop() {
                 const disabledAttr = state.isSimulating ? 'disabled' : '';
                 html += `
                     <div>
-                        <label class="block text-slate-300 text-[11px] font-semibold mb-1">Resistência (Lei de Ohm)</label>
+                        <label class="block text-slate-600 dark:text-slate-300 text-[11px] font-semibold mb-1">Resistência (Lei de Ohm)</label>
                         <div class="flex space-x-2">
-                            <input type="number" min="1" max="1000000" value="${comp.props.resistance || 220}" onchange="updateCompProp('${comp.id}', 'resistance', parseFloat(this.value));" class="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 font-mono focus:outline-none focus:border-cyan-500" ${disabledAttr}>
-                            <span class="bg-slate-800 border border-slate-700 text-slate-300 px-2 py-1 rounded font-mono text-xs flex items-center">Ω</span>
+                            <input type="number" min="1" max="1000000" value="${comp.props.resistance || 220}" onchange="updateCompProp('${comp.id}', 'resistance', parseFloat(this.value));" class="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-slate-800 dark:text-slate-100 font-mono focus:outline-none focus:border-cyan-500 transition-colors" ${disabledAttr}>
+                            <span class="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded font-mono text-xs flex items-center transition-colors">Ω</span>
                         </div>
                     </div>
                 `;
@@ -1304,20 +1330,20 @@ void loop() {
                 const disabledClass = state.isSimulating ? 'opacity-50 cursor-not-allowed pointer-events-none' : '';
                 html += `
                     <div>
-                        <label class="block text-slate-300 text-[11px] font-semibold mb-1">Cor do LED</label>
+                        <label class="block text-slate-600 dark:text-slate-300 text-[11px] font-semibold mb-1">Cor do LED</label>
                         <div class="flex space-x-2 ${disabledClass}">
-                            <button onclick="updateCompProp('${comp.id}', 'color', 'red'); openInspector('${comp.id}')" class="w-6 h-6 rounded-full bg-red-500 ring-2 ring-offset-1 ring-offset-slate-800 ${comp.props.color === 'red' ? 'ring-cyan-400' : 'ring-transparent hover:ring-slate-500'}" title="Vermelho"></button>
-                            <button onclick="updateCompProp('${comp.id}', 'color', 'yellow'); openInspector('${comp.id}')" class="w-6 h-6 rounded-full bg-yellow-500 ring-2 ring-offset-1 ring-offset-slate-800 ${comp.props.color === 'yellow' ? 'ring-cyan-400' : 'ring-transparent hover:ring-slate-500'}" title="Amarelo"></button>
-                            <button onclick="updateCompProp('${comp.id}', 'color', 'green'); openInspector('${comp.id}')" class="w-6 h-6 rounded-full bg-green-500 ring-2 ring-offset-1 ring-offset-slate-800 ${comp.props.color === 'green' ? 'ring-cyan-400' : 'ring-transparent hover:ring-slate-500'}" title="Verde"></button>
-                            <button onclick="updateCompProp('${comp.id}', 'color', 'blue'); openInspector('${comp.id}')" class="w-6 h-6 rounded-full bg-blue-500 ring-2 ring-offset-1 ring-offset-slate-800 ${comp.props.color === 'blue' ? 'ring-cyan-400' : 'ring-transparent hover:ring-slate-500'}" title="Azul"></button>
-                            <button onclick="updateCompProp('${comp.id}', 'color', 'white'); openInspector('${comp.id}')" class="w-6 h-6 rounded-full bg-slate-200 ring-2 ring-offset-1 ring-offset-slate-800 ${comp.props.color === 'white' ? 'ring-cyan-400' : 'ring-transparent hover:ring-slate-500'}" title="Branco"></button>
+                            <button onclick="updateCompProp('${comp.id}', 'color', 'red'); openInspector('${comp.id}')" class="w-6 h-6 rounded-full bg-red-500 ring-2 ring-offset-1 ring-offset-white dark:ring-offset-slate-800 ${comp.props.color === 'red' ? 'ring-cyan-500' : 'ring-transparent hover:ring-slate-300 dark:hover:ring-slate-500'}" title="Vermelho"></button>
+                            <button onclick="updateCompProp('${comp.id}', 'color', 'yellow'); openInspector('${comp.id}')" class="w-6 h-6 rounded-full bg-yellow-500 ring-2 ring-offset-1 ring-offset-white dark:ring-offset-slate-800 ${comp.props.color === 'yellow' ? 'ring-cyan-500' : 'ring-transparent hover:ring-slate-300 dark:hover:ring-slate-500'}" title="Amarelo"></button>
+                            <button onclick="updateCompProp('${comp.id}', 'color', 'green'); openInspector('${comp.id}')" class="w-6 h-6 rounded-full bg-green-500 ring-2 ring-offset-1 ring-offset-white dark:ring-offset-slate-800 ${comp.props.color === 'green' ? 'ring-cyan-500' : 'ring-transparent hover:ring-slate-300 dark:hover:ring-slate-500'}" title="Verde"></button>
+                            <button onclick="updateCompProp('${comp.id}', 'color', 'blue'); openInspector('${comp.id}')" class="w-6 h-6 rounded-full bg-blue-500 ring-2 ring-offset-1 ring-offset-white dark:ring-offset-slate-800 ${comp.props.color === 'blue' ? 'ring-cyan-500' : 'ring-transparent hover:ring-slate-300 dark:hover:ring-slate-500'}" title="Azul"></button>
+                            <button onclick="updateCompProp('${comp.id}', 'color', 'white'); openInspector('${comp.id}')" class="w-6 h-6 rounded-full bg-slate-200 ring-2 ring-offset-1 ring-offset-white dark:ring-offset-slate-800 ${comp.props.color === 'white' ? 'ring-cyan-500' : 'ring-transparent hover:ring-slate-300 dark:hover:ring-slate-500'}" title="Branco"></button>
                         </div>
                     </div>
                 `;
             } else if (comp.type === 'ultrasonic') {
                 html += `
                     <div>
-                        <div class="flex justify-between text-slate-300 mb-1">
+                        <div class="flex justify-between text-slate-600 dark:text-slate-300 mb-1">
                             <span>Distância Simulação</span>
                             <span id="dist-val">${comp.props.distance} cm</span>
                         </div>
@@ -1327,7 +1353,7 @@ void loop() {
             } else if (comp.type === 'potentiometer') {
                 html += `
                     <div>
-                        <div class="flex justify-between text-slate-300 mb-1">
+                        <div class="flex justify-between text-slate-600 dark:text-slate-300 mb-1">
                             <span>Divisor de Tensão (Dial)</span>
                             <span id="pot-val">${comp.props.rotation}°</span>
                         </div>
@@ -1337,7 +1363,7 @@ void loop() {
             } else if (comp.type === 'ldr') {
                 html += `
                     <div>
-                        <div class="flex justify-between text-slate-300 mb-1">
+                        <div class="flex justify-between text-slate-600 dark:text-slate-300 mb-1">
                             <span>Luminosidade (Lux)</span>
                             <span id="ldr-val">${comp.props.light || 50}%</span>
                         </div>
@@ -1348,21 +1374,21 @@ void loop() {
 
             if (state.isSimulating) {
                 html += `
-                    <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 space-y-1">
-                        <div class="text-[11px] font-semibold text-cyan-400 flex items-center gap-1.5">
+                    <div class="bg-slate-50 dark:bg-slate-950 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1 transition-colors">
+                        <div class="text-[11px] font-semibold text-cyan-600 dark:text-cyan-400 flex items-center gap-1.5">
                             <i class="fa-solid fa-bolt"></i> Multímetro Virtual
                         </div>
                         <div class="flex justify-between text-[11px]">
-                            <span class="text-slate-400">Tensão (V):</span>
-                            <span class="font-mono text-emerald-400">${elec.voltage || 0} V</span>
+                            <span class="text-slate-500 dark:text-slate-400">Tensão (V):</span>
+                            <span class="font-mono text-emerald-600 dark:text-emerald-400">${elec.voltage || 0} V</span>
                         </div>
                         <div class="flex justify-between text-[11px]">
-                            <span class="text-slate-400">Corrente (I):</span>
-                            <span class="font-mono ${elec.burnt ? 'text-rose-400 font-bold' : 'text-amber-400'}">${elec.currentMa || 0} mA</span>
+                            <span class="text-slate-500 dark:text-slate-400">Corrente (I):</span>
+                            <span class="font-mono ${elec.burnt ? 'text-rose-600 dark:text-rose-400 font-bold' : 'text-amber-600 dark:text-amber-400'}">${elec.currentMa || 0} mA</span>
                         </div>
                         <div class="flex justify-between text-[11px]">
-                            <span class="text-slate-400">Potência (P):</span>
-                            <span class="font-mono text-slate-300">${elec.powerMw || 0} mW</span>
+                            <span class="text-slate-500 dark:text-slate-400">Potência (P):</span>
+                            <span class="font-mono text-slate-600 dark:text-slate-300">${elec.powerMw || 0} mW</span>
                         </div>
                     </div>
                 `;
@@ -1370,7 +1396,7 @@ void loop() {
 
             if (!state.isSimulating) {
                 html += `
-                    <button onclick="deleteComponent('${comp.id}')" class="w-full bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/60 py-1.5 rounded transition-all mt-2 font-medium">
+                    <button onclick="deleteComponent('${comp.id}')" class="w-full bg-rose-100 dark:bg-rose-950/80 hover:bg-rose-200 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 py-1.5 rounded transition-all mt-2 font-medium">
                         <i class="fa-solid fa-trash-can mr-1"></i> Remover Componente
                     </button>
                 `;
@@ -1385,18 +1411,18 @@ void loop() {
 
             const panel = document.getElementById('inspector-panel');
             const content = document.getElementById('inspector-content');
-            document.getElementById('inspector-title').innerHTML = `<i class="fa-solid fa-code-branch text-cyan-400"></i> Fio Jumper`;
+            document.getElementById('inspector-title').innerHTML = `<i class="fa-solid fa-code-branch text-cyan-600 dark:text-cyan-400"></i> Fio Jumper`;
 
             panel.classList.remove('hidden');
 
             let html = `
                 <div class="space-y-2">
-                    <p class="text-slate-300">Conectado de <b class="text-cyan-400">${wire.fromPinId}</b> para <b class="text-cyan-400">${wire.toPinId}</b></p>
+                    <p class="text-slate-600 dark:text-slate-300">Conectado de <b class="text-cyan-600 dark:text-cyan-400">${wire.fromPinId}</b> para <b class="text-cyan-600 dark:text-cyan-400">${wire.toPinId}</b></p>
             `;
 
             if (!state.isSimulating) {
                 html += `
-                    <button onclick="deleteWire('${wire.id}')" class="w-full bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/60 py-1.5 rounded transition-all mt-2 font-medium">
+                    <button onclick="deleteWire('${wire.id}')" class="w-full bg-rose-100 dark:bg-rose-950/80 hover:bg-rose-200 dark:hover:bg-rose-900 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/60 py-1.5 rounded transition-all mt-2 font-medium">
                         <i class="fa-solid fa-trash-can mr-1"></i> Deletar Fio
                     </button>
                 `;
@@ -1717,6 +1743,41 @@ void loop() {
                     break;
             }
         }
+
+        // --- Configuração do Tema Claro / Escuro ---
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                icon.className = 'fa-solid fa-moon';
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                icon.className = 'fa-solid fa-sun';
+            }
+        }
+
+        // Inicializa o Ícone de Tema baseado no localStorage e no HTML default
+        document.addEventListener('DOMContentLoaded', () => {
+            const icon = document.getElementById('theme-icon');
+            
+            // Verifica o localStorage para persistência de tema
+            if (localStorage.theme === 'light') {
+                document.documentElement.classList.remove('dark');
+            } else if (!localStorage.theme) {
+                // Se não houver tema salvo, mantém o padrão dark e salva
+                localStorage.setItem('theme', 'dark');
+            }
+
+            if (document.documentElement.classList.contains('dark')) {
+                icon.className = 'fa-solid fa-sun';
+            } else {
+                icon.className = 'fa-solid fa-moon';
+            }
+        });
     </script>
 </body>
 </html>
