@@ -1535,8 +1535,37 @@ void loop() {
 
         async function runArduinoCode() {
             const rawCode = document.getElementById('code-editor').value;
+         
+
+            // Tipos de dados nativos do C++ / Arduino
+            const cTypes = 'int|float|double|long|short|byte|bool|boolean|char|String|unsigned\\s+int|unsigned\\s+long|uint8_t|uint16_t|uint32_t|word';
 
             let jsCode = rawCode
+                // 1. Ignorar includes e converter macros #define para const em JS
+                .replace(/#include\s*(<|")[^>"]+(>|")/g, '// Include omitido')
+                .replace(/#define\s+([a-zA-Z_]\w*)\s+([^/\n\r]+)/g, (m, name, val) => `const ${name} = ${val.trim()};`)
+                
+                // 2. Setup e Loop padrão
+                .replace(/void\s+setup\s*\(\s*\)/g, 'async function setup()')
+                .replace(/void\s+loop\s*\(\s*\)/g, 'async function loop()')
+                
+                // 3. Funções personalizadas criadas pelo usuário (ex: void piscar(int pino))
+                .replace(new RegExp(`\\b(void|${cTypes})\\s+([a-zA-Z_]\\w*)\\s*\\(([^)]*)\\)\\s*\\{`, 'g'), (match, type, name, args) => {
+                    let cleanArgs = args.replace(new RegExp(`\\b(const\\s+)?(${cTypes})\\s+`, 'g'), '');
+                    return `async function ${name}(${cleanArgs}) {`;
+                })
+                
+                // 4. Declaração de Variáveis (converte int, float, etc. para let e const)
+                .replace(new RegExp(`\\bconst\\s+(${cTypes})\\s+([a-zA-Z_]\\w*)`, 'g'), 'const $2')
+                .replace(new RegExp(`\\b(${cTypes})\\s+([a-zA-Z_]\\w*)`, 'g'), 'let $2')
+
+                // 5. Bibliotecas e funções da API do Arduino
+                .replace(/Ultrasonic\s+(\w+)\s*\(\s*([A-Za-z0-9_]+)\s*,\s*([A-Za-z0-9_]+)\s*\)\s*;/g, 'var $1 = new Ultrasonic($2, $3);')
+                .replace(/pinMode\((.*?)\);/g, 'board.pinMode($1);')
+                .replace(/digitalWrite\((.*?)\);/g, 'await board.digitalWrite($1);')
+                .replace(/digitalRead\((.*?)\)/g, 'await board.digitalRead($1)')
+
+    
                 .replace(/void\s+setup\s*\(\s*\)/g, 'async function setup()')
                 .replace(/void\s+loop\s*\(\s*\)/g, 'async function loop()')
                 .replace(/pinMode\((.*?)\);/g, 'board.pinMode($1);')
