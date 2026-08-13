@@ -286,7 +286,7 @@ void loop() {
         };
 
         const PALETTE = [
-            { type: 'arduino_uno', name: 'Arduino Uno R3', icon: 'fa-microchip', category: 'Placas' },
+            { type: 'arduino_uno', name: ' R3', icon: 'fa-microchip', category: 'Placas' },
             { type: 'breadboard', name: 'Protoboard (400 pts)', icon: 'fa-border-all', category: 'Placas' },
             { type: 'led', name: 'LED (Vermelho)', icon: 'fa-lightbulb', category: 'Saídas', color: '#ef4444' },
             { type: 'led_green', name: 'LED (Verde)', icon: 'fa-lightbulb', category: 'Saídas', color: '#22c55e' },
@@ -308,14 +308,14 @@ void loop() {
         window.onload = function() {
             renderPalette();
             
-            // STRICT REQUIREMENT: Start ONLY with Arduino Uno R3 on canvas
+            // STRICT REQUIREMENT: Start ONLY with  R3 on canvas
             state.components = [
                 {
                     id: 'ard1',
                     type: 'arduino_uno',
                     x: 220,
                     y: 110,
-                    name: 'Arduino Uno R3'
+                    name: ' R3'
                 }
             ];
 
@@ -792,9 +792,9 @@ void loop() {
                 <text x="150" y="107" fill="#64748b" font-size="9" font-family="monospace" text-anchor="middle">ATmega328P</text>
 
                 <!-- Board Markings -->
-                <text x="130" y="60" fill="#ffffff" font-weight="bold" font-size="16" font-family="sans-serif" text-anchor="middle">ARDUINO UNO</text>
-                <text x="130" y="155" fill="#e2e8f0" font-weight="bold" font-size="7.5" font-family="sans-serif" text-anchor="middle">POWER</text>
-                <text x="215" y="155" fill="#e2e8f0" font-weight="bold" font-size="7.5" font-family="sans-serif" text-anchor="middle">ANALOG IN</text>
+                <text x="150" y="85" fill="#ffffff" font-weight="bold" font-size="16" font-family="sans-serif" text-anchor="middle">ARDUINO UNO</text>
+                <text x="130" y="140" fill="#e2e8f0" font-weight="bold" font-size="7.5" font-family="sans-serif" text-anchor="middle">POWER</text>
+                <text x="215" y="140" fill="#e2e8f0" font-weight="bold" font-size="7.5" font-family="sans-serif" text-anchor="middle">ANALOG IN</text>
 
                 <!-- LED 13 -->
                 <circle cx="120" cy="45" r="3.5" fill="${state.pinStates['ard1-D13']?.value ? '#22c55e' : '#334155'}" filter="${state.pinStates['ard1-D13']?.value ? 'url(#glow-green)' : ''}" />
